@@ -12,7 +12,7 @@ const defaultRules={
  "NEXUS":{courseBack:{"通常|70":7500,"通常|100":10000,"通常|130":12500,"通常|160":15000,"通常|190":17500},optionsPct:100,travelPct:0},
  "もし亀":{courseBack:{},optionsPct:100,travelPct:0},
  "リセット":{courseBack:{"通常|60":5000,"通常|90":7000,"通常|120":10000},optionsPct:100,travelPct:0},
- "アクア":{courseBack:{},optionsPct:null,travelPct:null,diaryPct:null}
+ "アクア":{courseBack:{"通常|60":5000,"通常|90":7000,"通常|120":10000},optionsPct:100,travelPct:0}
 };
 const n=v=>Number.isFinite(Number(v))?Number(v):0;
 const blank=v=>v===null||v===undefined||v==="";
@@ -85,10 +85,7 @@ function compute(r){
   else add(label,Math.round(value*n(rule[field])/100)*(field==="discountPct"?-1:1));
  }
  const diary=diaries[recordDay(r)];
- if(r.store==="アクア"){
-  if(blank(rule.diaryPct))missing.push("アクアの雑費・日記控除ルール未確認");
-  else add("雑費控除 "+n(rule.diaryPct)+"％",-Math.round(Math.max(0,fee+n(r.nomination))*n(rule.diaryPct)/100));
- } else if(!Number.isInteger(diary)||diary<0)missing.push("日記投稿数");
+ if(!Number.isInteger(diary)||diary<0)missing.push("日記投稿数");
  else add("雑費控除 "+(diary>=6?5:10)+"％",-Math.round(Math.max(0,fee+n(r.nomination))*(diary>=6?5:10)/100));
  return {amount:missing.length?null:Math.round(sum),known:Math.round(sum),missing,breakdown};
 }
