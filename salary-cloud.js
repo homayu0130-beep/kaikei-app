@@ -43,6 +43,37 @@ const ruleFor=name=>{
  const def=defaultRules[name]||{courseBack:{}},own=overrides[name]||{};
  return {...def,...own,courseBack:{...def.courseBack,...(own.courseBack||{})}};
 };
+// Course + extension + nomination + travel are the shop-side total.
+// Options are collected separately and must not be added to this figure.
+function splitAmounts(r){
+ const course=n(r.base)+n(r.threeFee);
+ const extension=n(r.ext);
+ const nomination=n(r.nomination);
+ const travel=n(r.travel);
+ const shop=course+extension+nomination+travel;
+ const options=Array.isArray(r.options)?r.options.filter(o=>o&&typeof o==="object").map(o=>({
+  name:String(o.name||"オプション"),
+  amount:o.total===null||o.total===undefined?n(o.price)*n(o.qty||1):n(o.total)
+ })):[];
+ const listed=options.reduce((sum,o)=>sum+o.amount,0);
+ const recorded=n(r.optionsTotal);
+ if(recorded>listed)options.push({name:"内訳未登録のオプション",amount:recorded-listed});
+ return {course,extension,nomination,travel,shop,optionsTotal:Math.max(recorded,listed),options};
+}
+function appendMoneyRow(target,label,value,strong=false){
+ const row=document.createElement("div");
+ row.className="moneyRow"+(strong?" total":"");
+ const l=document.createElement("span");l.textContent=label;
+ const v=document.createElement(strong?"strong":"span");v.textContent=Y(value);
+ row.append(l,v);target.append(row);
+}
+function appendAmountGroup(target,title,rows,total,isPrivate=false){
+ const box=document.createElement("div");box.className="detailGroup"+(isPrivate?" private":"");
+ const h=document.createElement("h3");h.textContent=title;box.append(h);
+ for(const [label,amount] of rows)appendMoneyRow(box,label,amount);
+ appendMoneyRow(box,"合計",total,true);
+ target.append(box);
+}
 function compute(r){
  const rule=ruleFor(r.store),key=(r.mode==="3P"?"3P":"通常")+"|"+n(r.course);
  const missing=[],breakdown=[];
@@ -100,6 +131,8 @@ function render(){
  $("jobs").textContent=list.length+"件";
  $("sales").textContent=Y(list.reduce((v,r)=>v+n(r.total),0));
  $("payTotal").textContent=Y(res.reduce((v,x)=>v+(x.p.amount||0),0));
+ $("shopTotal").textContent=Y(list.reduce((v,r)=>v+splitAmounts(r).shop,0));
+ $("privateOptionsTotal").textContent=Y(list.reduce((v,r)=>v+splitAmounts(r).optionsTotal,0));
  setStatus("pendingSummary",pending?pending+"件は給料の計算に必要な設定が未入力です。計算済み合計に含めていません。":"対象の給料はすべて計算済みです。");
  const groups=new Map();
  for(const item of res){
@@ -121,14 +154,25 @@ function render(){
   const count=document.createElement("span");count.className="pill";count.textContent=entries.length+"件";
   top.append(label,count);
   const value=document.createElement("div");value.className="big";value.textContent="給料 "+Y(total)+(need?" ＋ 要設定"+need+"件":"");
+  const shopTotal=entries.reduce((sum,x)=>sum+splitAmounts(x.r).shop,0);
+  const optionTotal=entries.reduce((sum,x)=>sum+splitAmounts(x.r).optionsTotal,0);
+  const split=document.createElement("div");split.className="muted dayMetric";
+  split.textContent="お店分 "+Y(shopTotal)+" ／ オプション "+Y(optionTotal);
   const detail=document.createElement("div");detail.className="muted";detail.textContent=Number.isInteger(diaries[day])?"日記"+diaries[day]+"件":"日記未入力";
-  b.append(top,value,detail);
+  b.append(top,value,split,detail);
   b.addEventListener("click",()=>{selectedDay=day;render()});
   host.append(b);
  }
  $("dayTitle").textContent=selectedDay+" の給料";
  const detailHost=$("dayDetails");detailHost.replaceChildren();
  const entries=groups.get(selectedDay)||[];
+ const dayShop=entries.reduce((sum,x)=>sum+splitAmounts(x.r).shop,0);
+ const dayOptions=entries.reduce((sum,x)=>sum+splitAmounts(x.r).optionsTotal,0);
+ const dayBox=document.createElement("div");dayBox.className="dayGroupSummary";
+ const dayTitle=document.createElement("strong");dayTitle.textContent="この日の集計";dayBox.append(dayTitle);
+ appendMoneyRow(dayBox,"お店分（コース＋延長＋指名＋交通費）",dayShop,true);
+ appendMoneyRow(dayBox,"自分で受け取るオプション",dayOptions,true);
+ detailHost.append(dayBox);
  for(const {r,p} of entries){
   const item=document.createElement("div");item.className="item";
   const line=document.createElement("div");line.className="flex";
@@ -136,9 +180,19 @@ function render(){
   const pay=document.createElement("span");pay.className="big";pay.textContent=p.amount===null?"要設定":Y(p.amount);
   line.append(name,pay);item.append(line);
   const sub=document.createElement("div");sub.className="muted";sub.textContent="会計 "+Y(n(r.total))+"／"+(r.area||"");item.append(sub);
+  const split=splitAmounts(r);
+  appendAmountGroup(item,"お店に渡す分",[
+   ["コース料金",split.course],
+   ["延長料金",split.extension],
+   ["指名料",split.nomination],
+   ["交通費",split.travel]
+  ],split.shop);
+  appendAmountGroup(item,"自分で受け取るオプション代",
+   split.options.map(o=>[o.name,o.amount]),split.optionsTotal,true);
   if(p.missing.length){
    const warning=document.createElement("div");warning.className="warn";warning.textContent="要確認："+p.missing.join("・");item.append(warning);
   }
+  const calculationTitle=document.createElement("h3");calculationTitle.textContent="給料計算の内訳（オプション代も含む）";item.append(calculationTitle);
   for(const section of p.breakdown){
    const row=document.createElement("div");row.className="flex muted";
    const title=document.createElement("span");title.textContent=section.name;
