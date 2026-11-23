@@ -4,14 +4,15 @@ import {getFirestore,collection,doc,onSnapshot,setDoc,serverTimestamp} from "htt
 const config={apiKey:"AIzaSyD_recBEQb3-_zSX7csc2eDpovdMFCBnWw",authDomain:"kaikei-kyuryo-e6479.firebaseapp.com",projectId:"kaikei-kyuryo-e6479",storageBucket:"kaikei-kyuryo-e6479.firebasestorage.app",messagingSenderId:"928238559312",appId:"1:928238559312:web:5b5d4d2a4e89955f1db155"};
 const app=initializeApp(config,"salary-private"),auth=getAuth(app),db=getFirestore(app);
 const $=id=>document.getElementById(id),Y=v=>"¥"+Math.round(v).toLocaleString("ja-JP");
-const names=["NEXUS","もし亀","リセット"];
-const courses={"NEXUS":{"通常":[70,100,130,160,190],"3P":[70,100,130]},"もし亀":{"通常":[60,80,110],"3P":[60,80,110]},"リセット":{"通常":[60,90,120]}};
+const names=["NEXUS","もし亀","リセット","アクア"];
+const courses={"NEXUS":{"通常":[70,100,130,160,190],"3P":[70,100,130]},"もし亀":{"通常":[60,80,110],"3P":[60,80,110]},"リセット":{"通常":[60,90,120]},"アクア":{"通常":[60,90,120],"Wセラピスト":[60,90,120]}};
 const pctMeta=[["optionsPct","オプション（基本）"],["changePct","チェンジ料"],["travelPct","交通費"],["extraPct","その他追加"],["discountPct","値引き控除"]];
 const fullReset=new Set(["ベビードール","パウダー","極液","マイクロビキニ"]);
 const defaultRules={
  "NEXUS":{courseBack:{"通常|70":7500,"通常|100":10000,"通常|130":12500,"通常|160":15000,"通常|190":17500},optionsPct:100,travelPct:0},
  "もし亀":{courseBack:{},optionsPct:100,travelPct:0},
- "リセット":{courseBack:{"通常|60":5000,"通常|90":7000,"通常|120":10000},optionsPct:100,travelPct:0}
+ "リセット":{courseBack:{"通常|60":5000,"通常|90":7000,"通常|120":10000},optionsPct:100,travelPct:0},
+ "アクア":{courseBack:{},optionsPct:null,travelPct:null,diaryPct:null}
 };
 const n=v=>Number.isFinite(Number(v))?Number(v):0;
 const blank=v=>v===null||v===undefined||v==="";
@@ -84,7 +85,10 @@ function compute(r){
   else add(label,Math.round(value*n(rule[field])/100)*(field==="discountPct"?-1:1));
  }
  const diary=diaries[recordDay(r)];
- if(!Number.isInteger(diary)||diary<0)missing.push("日記投稿数");
+ if(r.store==="アクア"){
+  if(blank(rule.diaryPct))missing.push("アクアの雑費・日記控除ルール未確認");
+  else add("雑費控除 "+n(rule.diaryPct)+"％",-Math.round(Math.max(0,fee+n(r.nomination))*n(rule.diaryPct)/100));
+ } else if(!Number.isInteger(diary)||diary<0)missing.push("日記投稿数");
  else add("雑費控除 "+(diary>=6?5:10)+"％",-Math.round(Math.max(0,fee+n(r.nomination))*(diary>=6?5:10)/100));
  return {amount:missing.length?null:Math.round(sum),known:Math.round(sum),missing,breakdown};
 }
