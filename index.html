@@ -107,6 +107,12 @@
 <div id="dailyDays" class="dailyDays hidden"></div>
 
 </section>
+<section class="card" id="cloudAccount">
+<div class="sectionTitle"><b>☁</b> Googleで会計履歴を同期</div>
+<div class="row2"><button id="cloudLogin" class="btn primary" type="button">Googleでログイン</button><button id="cloudLogout" class="btn hidden" type="button">ログアウト</button></div>
+<button id="cloudSync" class="btn hidden" type="button" style="width:100%;margin-top:8px">会計履歴を再同期</button>
+<p id="cloudStatus" class="muted" role="status" aria-live="polite">クラウドの接続を確認しています…</p>
+</section>
 <section class="card" id="history">
 <div class="sectionTitle"><b>6</b> 会計履歴</div>
 
@@ -355,7 +361,7 @@ function dailyCsv(){
  exportFile('店舗別日次売上_'+tokyoDay(new Date())+'.csv','\uFEFF'+output.map(r=>r.map(csvCell).join(',')).join('\r\n'),'text/csv;charset=utf-8');
 }
 function renderRecords(){const host=$('recordList'),filter=$('recordFilter').value,q=$('recordSearch').value.trim().toLowerCase();host.replaceChildren();const list=records.filter(r=>(filter==='all'||String(r.si)===filter)&&(!q||[r.store,r.area,r.memo,r.mode].some(x=>String(x||'').toLowerCase().includes(q)))).slice().reverse();$('recordCount').textContent='保存 '+records.length+'件 ／ 表示 '+list.length+'件';if(!list.length){host.append(node('p','muted','該当する記録はありません。会計を保存するとここに表示されます。'));return}
-for(const rec of list){const card=node('div','record'),head=node('div','recHead');const left=node('div');left.append(node('div','',rec.store+'｜'+rec.course+'分 '+rec.mode),node('div','muted',(rec.serviceDate?'利用日 '+rec.serviceDate:'利用日未入力')+' ／ 保存 '+localDate(rec.date)+' ／ '+rec.area));const right=node('div','',rec.complete?yen(rec.total):'要入力' );right.style.textAlign='right';head.append(left,right);const below=node('div','muted','合計 '+(rec.complete?yen(rec.total):'要入力' )+'　預かり '+(rec.received===null?'未入力':yen(rec.received))+'　おつり '+(rec.changeDue===null?'未計算':rec.changeDue<0?'不足 '+yen(-rec.changeDue):yen(rec.changeDue)));const btns=node('div','recActions');const detail=node('button','btn','内訳を表示'),view=node('button','btn','お客様表示'),remove=node('button','btn destructive','削除');const data=node('pre','small hidden');data.style.whiteSpace='pre-wrap';data.style.background='#faf8f3';data.style.padding='10px';data.style.borderRadius='8px';data.textContent=snapshotText(rec);detail.onclick=()=>{data.classList.toggle('hidden');detail.textContent=data.classList.contains('hidden')?'内訳を表示':'内訳を閉じる'};view.onclick=()=>openReceipt(rec);remove.onclick=()=>{if(!confirm('この会計記録を削除しますか？'))return;const next=records.filter(x=>x.id!==rec.id);const old=records;records=next;if(!saveRecords()){records=old;alert('保存領域に書き込めなかったため削除できませんでした。')}renderRecords();renderDaily()};btns.append(detail,view,remove);card.append(head,below,btns,data);host.append(card)}}
+for(const rec of list){const card=node('div','record'),head=node('div','recHead');const left=node('div');left.append(node('div','',rec.store+'｜'+rec.course+'分 '+rec.mode),node('div','muted',(rec.serviceDate?'利用日 '+rec.serviceDate:'利用日未入力')+' ／ 保存 '+localDate(rec.date)+' ／ '+rec.area));const right=node('div','',rec.complete?yen(rec.total):'要入力' );right.style.textAlign='right';head.append(left,right);const below=node('div','muted','合計 '+(rec.complete?yen(rec.total):'要入力' )+'　預かり '+(rec.received===null?'未入力':yen(rec.received))+'　おつり '+(rec.changeDue===null?'未計算':rec.changeDue<0?'不足 '+yen(-rec.changeDue):yen(rec.changeDue)));const btns=node('div','recActions');const detail=node('button','btn','内訳を表示'),view=node('button','btn','お客様表示'),remove=node('button','btn destructive','削除');const data=node('pre','small hidden');data.style.whiteSpace='pre-wrap';data.style.background='#faf8f3';data.style.padding='10px';data.style.borderRadius='8px';data.textContent=snapshotText(rec);detail.onclick=()=>{data.classList.toggle('hidden');detail.textContent=data.classList.contains('hidden')?'内訳を表示':'内訳を閉じる'};view.onclick=()=>openReceipt(rec);remove.onclick=()=>{if(!confirm('この会計記録を削除しますか？'))return;const next=records.filter(x=>x.id!==rec.id);const old=records;records=next;if(!saveRecords()){records=old;alert('保存領域に書き込めなかったため削除できませんでした。')}else if(window.kaikeiCloud?.removeRecord)window.kaikeiCloud.removeRecord(rec.id).catch(()=>{});renderRecords();renderDaily()};btns.append(detail,view,remove);card.append(head,below,btns,data);host.append(card)}}
 $('store').onchange=()=>{si=Number($('store').value);optionRows=[];renderOptionList();$('optionName').value='';$('optionPrice').value='';$('optionPrice').min='0';$('optionPrice').placeholder='円';switchStore()};$('search').oninput=renderZones;
 $('normalBtn').onclick=()=>{three=false;renderMode()};$('threeBtn').onclick=()=>{if(si===2){three=false;renderMode();return}three=true;renderMode()};
 $('threeMode').onchange=()=>{store().threeMode=$('threeMode').value;$('threeFeeTitle').textContent=store().threeMode==='total'?'3P専用コース総額（円）':'3P追加料金（円）';renderAll()};
@@ -385,6 +391,7 @@ $('saveRecord').onclick=()=>{
  const item=recordSnapshot(c);records.push(item);
  if(!saveRecords()){records.pop();$('saveMessage').textContent='保存できませんでした。バックアップを確認してください。';$('saveMessage').className='errorText small';return;}
  lastSavedDraft=signature;
+ if(window.kaikeiCloud?.saveRecord)window.kaikeiCloud.saveRecord(item).catch(()=>{});
  $('saveMessage').textContent='✓ 会計履歴に保存しました。';
  $('saveMessage').className='successText small';renderRecords();renderDaily();
 };
@@ -401,8 +408,22 @@ $('dailyExport').onclick=dailyCsv;
 $('dailyShowAll').onclick=()=>{const box=$('dailyDays'),open=box.classList.toggle('hidden')===false;$('dailyShowAll').textContent=open?'日別一覧を閉じる':'記録のある日を表示';if(open)renderDailyDays()};
 $('jumpPay').onclick=()=>document.getElementById('checkout').scrollIntoView({behavior:'smooth'});
 renderStores();switchStore();renderZones();renderOptionList();renderRecords();renderDaily();
+window.kaikeiCloudBridge={
+ get:()=>records.map(r=>({...r})),
+ merge:(remote,deleted)=>{
+  const blocked=new Set(deleted||[]);
+  const current=new Map(records.filter(r=>!blocked.has(r.id)).map(r=>[r.id,r]));
+  for(const r of remote||[])if(r&&typeof r.id==='string'&&!blocked.has(r.id))current.set(r.id,r);
+  const next=[...current.values()].sort((a,b)=>(a.date||'').localeCompare(b.date||'')).slice(-5000);
+  if(JSON.stringify(records)!==JSON.stringify(next)){
+   records=next;
+   if(saveRecords()){renderRecords();renderDaily();}
+  }
+ }
+};
 })();
 </script>
+<script type="module" src="./cloud.js"></script>
 <script>if("serviceWorker" in navigator && location.protocol==="https:")navigator.serviceWorker.register("./sw.js").catch(()=>{});</script>
 </body>
 </html>
