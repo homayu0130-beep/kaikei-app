@@ -385,7 +385,7 @@ $('saveRecord').onclick=()=>{
  const item=recordSnapshot(c);records.push(item);
  if(!saveRecords()){records.pop();$('saveMessage').textContent='保存できませんでした。バックアップを確認してください。';$('saveMessage').className='errorText small';return;}
  lastSavedDraft=signature;
- $('saveMessage').textContent='✓ 会計履歴に保存しました。給料管理にも自動反映されます。';
+ $('saveMessage').textContent='✓ 会計履歴に保存しました。';
  $('saveMessage').className='successText small';renderRecords();renderDaily();
 };
 $('recordFilter').onchange=renderRecords;$('recordSearch').oninput=renderRecords;$('exportCsv').onclick=csv;
