@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/><meta name="theme-color" content="#263a32"/>
+<title>自分用｜3店舗 給料管理</title>
+<style>
+:root{--bg:#f5f5f0;--paper:#fff;--ink:#20312a;--sub:#657169;--line:#e0e7df;--accent:#2b5b48;--good:#186238;--warn:#8e5d16;--err:#a53636}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Noto Sans JP",sans-serif;font-size:14px;line-height:1.5}
+.wrap{max-width:850px;margin:auto;padding:0 14px 60px}header{background:linear-gradient(110deg,#1d342a,#55785c);color:white;margin:0 -14px 18px;padding:22px 17px}
+h1{margin:0;font-size:23px}h2{margin:0 0 12px;font-size:18px}h3{margin:10px 0;font-size:15px}header small{color:#d5e9d6}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:15px;margin:13px 0;padding:17px;box-shadow:0 2px 12px #1a41200b}
+label{display:block;font-weight:700;color:var(--sub);margin:8px 0 5px;font-size:12px}
+input,select,button{font:inherit;max-width:100%}input,select{width:100%;padding:11px;border:1px solid #cad6ca;border-radius:9px;background:white;color:var(--ink)}
+button{border:1px solid #bfcebf;border-radius:9px;background:white;padding:10px 13px;cursor:pointer;font-weight:700;color:var(--accent)}button.primary{color:white;background:var(--accent);border-color:var(--accent)}button:disabled{opacity:.5;cursor:wait}
+.flex{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.metric{background:#eff5ef;border-radius:12px;padding:12px}.metric strong{display:block;font-size:23px;line-height:1.2}.metric span{font-size:11px;color:var(--sub)}
+.muted{font-size:12px;color:var(--sub)}.message{margin-top:10px;white-space:pre-wrap}.warn{color:var(--warn)}.error{color:var(--err)}.good{color:var(--good)}
+.item{padding:13px 0;border-bottom:1px solid var(--line)}.item:last-child{border-bottom:0}.day{width:100%;text-align:left;background:white;margin:5px 0;display:block}.day[aria-pressed=true]{background:#e6f0e6;border-color:var(--accent)}.big{font-size:17px;font-weight:800}
+.table{width:100%;border-collapse:collapse}.table td,.table th{padding:8px 5px;border-bottom:1px solid var(--line);text-align:left}.table input{min-width:90px}.pill{font-size:11px;border-radius:99px;background:#ddecdf;color:#254938;padding:3px 9px;white-space:nowrap}.hidden{display:none!important}
+@media(min-width:650px){.top{display:grid;grid-template-columns:1fr 1fr;gap:14px}}@media(max-width:450px){.grid3{grid-template-columns:1fr 1fr}.metric strong{font-size:19px}}
+</style></head><body>
+<div class="wrap"><header><small>PRIVATE SALARY DASHBOARD</small><h1>自分用 給料管理</h1><div class="muted" style="color:#d5e9d6">NEXUS・もし亀・リセット</div></header>
+<section class="card" id="authGate"><h2>Googleアカウントで本人確認</h2><button type="button" class="primary" id="login">Googleでログイン</button><p class="muted">ログイン後、会計アプリのクラウド履歴を自動で読み込みます。</p><p class="message" id="loginStatus"></p></section>
+<main id="privateContent" class="hidden">
+<section class="card"><div class="flex"><div><strong id="accountName">ログイン中</strong><div class="muted" id="syncStatus">履歴を読み込み中…</div></div><div class="flex"><button id="refresh" type="button">再読み込み</button><button id="logout" type="button">ログアウト</button></div></div></section>
+<section class="card"><div class="grid"><div><label for="month">集計する月</label><input id="month" type="month"/></div><div><label for="storeFilter">店舗</label><select id="storeFilter"><option value="all">全店舗</option><option>NEXUS</option><option>もし亀</option><option>リセット</option></select></div></div><div class="grid3" style="margin-top:14px"><div class="metric"><span>会計件数</span><strong id="jobs">0件</strong></div><div class="metric"><span>会計売上</span><strong id="sales">¥0</strong></div><div class="metric"><span>給料（計算済み）</span><strong id="payTotal">¥0</strong></div></div><p class="message" id="pendingSummary"></p></section>
+<div class="top">
+<section class="card"><h2>日別の給料</h2><div id="days" class="muted">会計履歴を読み込み中…</div></section>
+<section class="card"><h2 id="dayTitle">日付を選んでください</h2><div id="dayDetails" class="muted">日付を選ぶと内訳が出ます。</div><div id="diaryBox" class="hidden"><label for="diaryCount">この日の日記投稿数</label><div class="flex"><input id="diaryCount" type="number" inputmode="numeric" min="0" max="999" placeholder="件数" style="flex:1;width:90px"/><button class="primary" id="diarySave" type="button">保存</button></div><p class="muted">6件以上なら雑費5％、5件以下なら10％で計算します。</p><div class="message" id="diaryMessage"></div></div></section>
+</div>
+<section class="card"><h2>店舗ごとの給料設定</h2><p class="muted">不明なバック額は空欄にしておけます。会計履歴は自動反映され、未設定の分だけ要確認として表示します。</p>
+<label for="ruleStore">設定する店舗</label><select id="ruleStore"><option>NEXUS</option><option>もし亀</option><option>リセット</option></select>
+<div id="courseBackFields" style="margin-top:12px"></div>
+<h3>その他のバック率（％）</h3><div class="grid" id="pctFields"></div>
+<button class="primary" id="saveSettings" style="width:100%;margin-top:14px">給料設定を保存</button><div class="message" id="settingsStatus"></div>
+</section>
+<section class="card"><div class="flex"><a href="./" style="color:var(--accent)">会計アプリへ戻る</a><span class="muted">給料・履歴はGoogleログイン中だけ表示します</span></div></section>
+</main></div>
+<script type="module" src="./salary-cloud.js"></script></body></html>
