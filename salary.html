@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+
+<html lang="ja">
+<head>
+<meta charset="utf-8"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/>
+<meta content="light" name="color-scheme"/><meta name="theme-color" content="#252d2b"/><link rel="manifest" href="./manifest-salary.webmanifest"/><title>自分専用｜給料・日別売上管理</title>
+<style>
+:root{--bg:#f7f5f0;--card:#fff;--ink:#2b2927;--sub:#77736d;--line:#e7e1d7;--dark:#252d2b;--mint:#dfece3;--warn:#8e5b1d;--red:#aa4343}
+*{box-sizing:border-box}body{background:var(--bg);margin:0;color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;font-size:14px}
+main{max-width:770px;margin:0 auto;padding:14px 13px 45px}h1{font-size:23px;margin:4px 0}h2{font-size:16px;margin:0 0 12px}h3{font-size:14px;margin:12px 0 8px}p{line-height:1.65}.muted{color:var(--sub);font-size:12px}.top{background:var(--dark);color:white;padding:23px 18px;border-radius:16px}.top p{color:#d4e0da;margin:8px 0 0}.private{font-size:11px;border:1px solid #92aaa0;padding:5px 9px;border-radius:999px;display:inline-block;background:#32433f}
+.card{background:var(--card);border:1px solid var(--line);border-radius:15px;padding:15px;margin-top:12px;box-shadow:0 1px 2px #24201908}.row{display:flex;align-items:center;justify-content:space-between;gap:10px}.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}.field{border:1px solid #d9d4cb;border-radius:9px;background:#fff;width:100%;padding:11px;font:inherit;color:var(--ink);min-width:0}label{display:block;font-size:12px;font-weight:600;color:#68625b;margin-bottom:5px}.button{font:inherit;border:1px solid #d4cec3;color:var(--ink);background:#fff;border-radius:9px;cursor:pointer;padding:10px 12px;font-weight:600}.button.primary{background:var(--dark);color:#fff;border-color:var(--dark)}.button:focus-visible,.field:focus-visible{outline:2px solid #6d9182;outline-offset:1px}.tabs{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:12px}.tab{padding:11px 4px;border:1px solid var(--line);border-radius:10px;background:#fff;font-weight:700}.tab[aria-selected=true]{background:#dfece3;border-color:#7eaa98}.hidden{display:none!important}.metric{background:#f4f5f0;padding:13px;border-radius:11px}.metric .val{font-size:22px;line-height:1.3;font-weight:800;overflow-wrap:anywhere}.metric .desc{font-size:11px;color:var(--sub);margin-bottom:5px}.warning{background:#fff4e6;border:1px solid #efd9b5;border-radius:10px;padding:9px 11px;color:#795121;font-size:12px}.good{background:#edf8ee;border:1px solid #d6e6d7;border-radius:10px;padding:9px 11px;color:#315d3c;font-size:12px}.day{border:1px solid var(--line);background:#fff;border-radius:11px;width:100%;padding:13px;margin-top:7px;text-align:left;font:inherit;color:inherit;cursor:pointer}.day .amount{font-weight:800;font-size:15px}.day:hover{border-color:#abc5b9}.day[aria-pressed=true]{border:2px solid #779c8c;background:#f6fbf7}.divider{height:1px;background:var(--line);margin:13px 0}.line{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid var(--line)}.line:last-child{border:0}.small{font-size:12px}.tag{padding:3px 7px;background:#eeeae3;border-radius:7px;color:#605c55;font-size:11px}.pending{color:var(--warn);font-weight:700}.record{padding:11px 0;border-bottom:1px solid var(--line)}.record:last-child{border:0}.record .title{font-weight:700}.rtable{width:100%;border-collapse:collapse;font-size:12px}.rtable th{text-align:left;background:#f2f3ef;padding:8px 6px}.rtable td{border-bottom:1px solid var(--line);padding:7px 5px}.rtable input{padding:9px 6px}.quick{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.empty{border:1px dashed #d3cec2;border-radius:11px;padding:15px;color:var(--sub);font-size:13px}.message{min-height:18px;font-size:12px;color:#426d55}.pill{background:#f0f4f1;color:#3b6b53;font-size:11px;border-radius:999px;padding:5px 8px;white-space:nowrap}.note{margin-top:8px;font-size:12px;color:var(--sub)}details summary{font-weight:700;cursor:pointer}.indent{padding:10px;background:#f7f5f1;border-radius:9px;margin-top:8px}.footer{margin-top:16px;font-size:11px;color:#8d8982;line-height:1.6}
+@media(min-width:600px){main{padding:22px 20px 50px}.top{padding:27px}.card{padding:19px}}
+@media(max-width:340px){.grid3{grid-template-columns:repeat(2,1fr)}.metric .val{font-size:18px}}
+@media print{body{background:#fff}main{max-width:none}.top,.tabs,#dataPanel,#rulesPanel,#actionsRow,#filterPanel .row,.button{display:none!important}.card{box-shadow:none}}
+
+body.salary-locked main{display:none!important}
+#salaryGate{position:fixed;inset:0;z-index:99999;display:grid;place-items:center;background:#f7f5f0;padding:20px}
+body:not(.salary-locked) #salaryGate{display:none}
+#salaryGate .gatePanel{width:min(100%,390px);background:#fff;border:1px solid #e7e1d7;border-radius:18px;padding:25px 20px;box-shadow:0 12px 35px #252d2b1c}
+#salaryGate h2{font-size:21px;margin:0 0 12px}
+#salaryGate input{width:100%;padding:14px;border-radius:9px;border:1px solid #d4cec3;font-size:20px;letter-spacing:4px;text-align:center;margin:10px 0 8px}
+#salaryGate button{width:100%;padding:13px;background:#252d2b;color:white;border:0;border-radius:9px;font-size:15px;font-weight:700;cursor:pointer}
+#salaryGate .gateErr{color:#a43636;min-height:20px;font-size:12px;margin-top:9px}
+@media print {#salaryGate{display:none!important}}
+</style></head><body class="salary-locked">
+<div id="salaryGate" role="dialog" aria-modal="true" aria-label="給料管理のロック">
+ <div class="gatePanel">
+  <h2>🔒 自分用・給料管理</h2>
+  <p id="salaryGateInfo" class="muted">この端末用の暗証番号を設定してください。</p>
+  <input id="salaryPin" type="password" inputmode="numeric" minlength="6" maxlength="12" autocomplete="off" placeholder="6〜12桁の数字" aria-label="暗証番号"/>
+  <input id="salaryPinConfirm" type="password" inputmode="numeric" minlength="6" maxlength="12" autocomplete="off" placeholder="もう一度入力" aria-label="暗証番号の確認"/>
+  <button id="salaryUnlock" type="button">暗証番号を設定</button>
+  <p id="salaryGateError" class="gateErr" role="alert"></p>
+  <p class="muted" style="margin-top:10px">端末内の誤表示防止用です。インターネット上での本人認証ではありません。</p>
+ </div>
+</div>
+<main>
+<header class="top">
+<div class="row"><div class="private">🔒 自分用</div><button class="button small" type="button" id="lockSalaryNow">画面をロック</button></div>
+<h1>給料・日別売上管理</h1>
+
+</header>
+<nav aria-label="アプリの機能" class="tabs"><button aria-selected="true" class="tab" data-tab="dashboard">日別集計</button><button aria-selected="false" class="tab" data-tab="rules">給料設定</button><button aria-selected="false" class="tab" data-tab="data">バックアップ</button></nav>
+<section id="dashboardPanel">
+<div class="card" id="filterPanel">
+<div class="row"><h2>集計する期間</h2><span class="pill">日別・月別</span></div>
+<div class="grid2"><div><label for="month">対象月</label><input class="field" id="month" type="month"/></div><div><label for="storeFilter">店舗</label><select class="field" id="storeFilter"><option value="all">すべての店舗</option></select></div></div>
+<p class="muted" id="lastUpdate">会計アプリで保存すると、自動反映します。</p>
+</div>
+
+
+<div class="card"><h2>今月の集計</h2><div class="grid3">
+<div class="metric"><div class="desc">件数</div><div class="val" id="jobCount">0件</div></div>
+<div class="metric"><div class="desc">会計売上</div><div class="val" id="salesTotal">¥0</div></div>
+<div class="metric"><div class="desc">給料（計算済み）</div><div class="val" id="salaryTotal">—</div></div>
+</div><div class="note" id="pendingNote"></div>
+</div>
+<div class="card"><div class="row"><h2>日別一覧</h2><button class="button small" id="exportSalaryCsv" type="button">日別CSV保存</button></div><div class="empty" id="days">会計記録を読み込むと日別の売上が表示されます。</div></div>
+<div class="card hidden" id="detailPanel"><div class="row"><h2 id="detailTitle">日別の明細</h2><span class="tag" id="detailCount"></span></div><div id="daySummary"></div><div id="detailRecords"></div>
+<div class="divider"></div>
+<h3>日記・雑費</h3>
+
+<div class="grid2"><div><label for="diaryCount">日記投稿数（件）</label><input class="field" id="diaryCount" min="0" placeholder="未入力／0件も可" step="1" type="number"/></div><div><label>適用される雑費率</label><div class="metric val" id="diaryRateLabel" style="font-size:16px;padding:10px">未設定</div></div></div>
+<button class="button primary" id="saveDiary" style="margin-top:9px;width:100%" type="button">この日の日記件数を保存</button>
+<div class="divider"></div>
+<h3>給料調整</h3>
+<div class="grid2"><div><label for="adjustStore">調整する店舗</label><select class="field" id="adjustStore"></select></div><div><label for="adjustAmount">調整額（円）</label><input class="field" id="adjustAmount" placeholder="例：2000 / -1000" type="number"/></div></div>
+<div style="margin-top:8px"><label for="adjustMemo">内容</label><input class="field" id="adjustMemo" placeholder="例：日払い・特別手当・交通費自己負担"/></div>
+<button class="button primary" id="saveAdjustment" style="margin-top:9px;width:100%">この日の調整を追加</button><div id="adjustmentsList" style="margin-top:9px"></div>
+</div>
+</section>
+<section class="hidden" id="rulesPanel">
+<div class="card"><h2>給料設定</h2>
+<div style="margin-bottom:12px"><label for="ruleStore">設定する店舗</label><select class="field" id="ruleStore"></select></div>
+<h3>コースごとの自分のバック（円）</h3>
+<div id="courseRules"></div>
+<div class="grid2" style="margin-top:10px"><div><label for="coursePct">コース歩合率（％・任意）</label><input class="field" id="coursePct" max="100" min="0" placeholder="未設定" step="0.1" type="number"/></div></div>
+<div class="divider"></div><h3>延長の取り分</h3>
+<label for="extensionMode">延長バックの計算方法（全店舗共通）</label><select class="field" disabled="" id="extensionMode"><option value="half">延長で請求した料金の50％（全店舗確定）</option></select>
+
+<div class="grid2 hidden" id="fixedExtensionFields"><div><label for="extNormal">通常延長の30分バック（円）</label><input class="field" id="extNormal" min="0" placeholder="未設定" type="number"/></div><div><label for="extThree">3P延長の30分バック（円）</label><input class="field" id="extThree" min="0" placeholder="未設定" type="number"/></div></div>
+<div class="good" id="nexus190Panel" style="margin-top:12px">190分予約 17,500円 ／ 160分＋30分延長 19,000円</div>
+<div class="divider"></div><h3>追加料金からの自分の取り分（％）</h3><div class="grid2" id="percentageFields"></div>
+
+<button class="button primary" id="saveRules" style="width:100%">この店舗の給料ルールを保存</button><p class="message" id="ruleStatus" role="status"></p>
+</div>
+</section>
+<section class="hidden" id="dataPanel">
+<div class="card"><h2>履歴の取り込み・バックアップ</h2>
+<div class="warning">同じサイトの会計記録は自動反映されます。別のスマホとは同期されません。</div>
+<h3>自動で読み込む</h3>
+<button class="button" id="readLocal" style="width:100%">同じ端末の会計記録を読み込む</button>
+<h3>ファイルから読み込む</h3>
+
+<label for="importFile">会計履歴 JSON または CSV</label><input accept=".json,.csv,application/json,text/csv" class="field" id="importFile" type="file">
+<div class="message" id="importStatus" role="status"></div>
+<div class="divider"></div><h3>バックアップ</h3>
+
+<div class="grid2"><button class="button" id="backupSelf">給料データを保存</button><button class="button" id="restoreSelfButton">給料データを復元</button></div><input accept=".json,application/json" class="hidden" id="restoreSelf" type="file"><p class="message" id="backupStatus"></p>
+<p class="muted" id="recordStats"></p>
+</input></input></div>
+</section>
+
+</main>
+<script>
+(()=>{
+'use strict';
+const $=id=>document.getElementById(id),Y=v=>'¥'+Math.round(v).toLocaleString('ja-JP');
+const KEYS={records:'private_salary_records_v1',rules:'private_salary_rules_v1',adjustments:'private_salary_adjustments_v1',diary:'private_salary_diary_v1'};
+const PAY_PCTS=[['nomPct','指名料'],['optionsPct','オプション'],['changePct','チェンジ料'],['travelPct','交通費'],['extraPct','その他追加'],['discountPct','値引き（控除）']];
+const COURSES={'NEXUS':{'通常':[70,100,130,160,190],'3P':[70,100,130]},'もし亀':{'通常':[60,80,110],'3P':[60,80,110]},'リセット':{'通常':[60,90,120]}};
+const safeStore=k=>{try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}};
+const save=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));return true}catch(e){return false}};
+let records=Array.isArray(safeStore(KEYS.records))?safeStore(KEYS.records):[];
+let rules=safeStore(KEYS.rules)||{},adjustments=safeStore(KEYS.adjustments)||[],diaryCounts=safeStore(KEYS.diary)||{};
+if(!Array.isArray(records))records=[];if(!rules||typeof rules!=='object'||Array.isArray(rules))rules={};if(!Array.isArray(adjustments))adjustments=[];if(!diaryCounts||typeof diaryCounts!=='object'||Array.isArray(diaryCounts))diaryCounts={};
+// 初回設定値。利用者がすでに保存したルールを上書きしない。
+const nexusPreset={'通常|70':7500,'通常|100':10000,'通常|130':12500,'通常|160':15000,'通常|190':17500};
+const resetPreset={'通常|60':5000,'通常|90':7000,'通常|120':10000};
+const RESET_FULL_OPTIONS=new Set(['ベビードール','パウダー','極液','マイクロビキニ']);
+for(const name of ['NEXUS','もし亀','リセット']){
+  if(!rules[name]||typeof rules[name]!=='object') rules[name]={};
+  const r=rules[name];
+  if(!r.courseBack||typeof r.courseBack!=='object')r.courseBack={};
+  if(name==='NEXUS')for(const [key,val] of Object.entries(nexusPreset))if(r.courseBack[key]===undefined)r.courseBack[key]=val;
+  if(name==='リセット')for(const [key,val] of Object.entries(resetPreset))if(r.courseBack[key]===undefined)r.courseBack[key]=val;
+  r.extensionMode='half'; // 全店舗の延長は会計で請求した延長料金の50％。旧設定も更新する。
+  r.nomPct=100; // 指名料バックは全店舗一律100％。旧保存データの設定も更新する。
+  if(r.travelPct===undefined)r.travelPct=0; // 交通費は給料に含めない仮設定（変更可能）
+  if(name!=='リセット'&&r.optionsPct===undefined)r.optionsPct=100;
+
+}
+save(KEYS.rules,rules);
+let selectedDay='',selectedRuleStore='NEXUS';
+const blank=v=>v===null||v===undefined||v==='';
+const n=v=>Number.isFinite(Number(v))?Number(v):0;
+const inputNum=id=>$(id).value.trim()===''?null:Number($(id).value);
+function jstDay(date){try{const d=new Date(date);if(Number.isNaN(d.getTime()))return '';const parts=new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Tokyo',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(d);const p=Object.fromEntries(parts.map(x=>[x.type,x.value]));return p.year+'-'+p.month+'-'+p.day}catch(e){return ''}}
+function useDay(r){if(typeof r.serviceDate==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(r.serviceDate))return r.serviceDate;const d=String(r.date||'');const match=d.match(/^(\d{4})[\/-](\d{2})[\/-](\d{2})/);if(match&&!d.includes('T'))return match[1]+'-'+match[2]+'-'+match[3];return jstDay(d)||'日付不明'}
+const currentMonth=()=>jstDay(new Date()).slice(0,7);
+$('month').value=currentMonth();
+function idFor(r){return r.id||'csv:'+hash(JSON.stringify([r.date,r.serviceDate,r.store,r.mode,r.course,r.area,r.total,r.optionsTotal,r.extMinutes,r.nomination,r.memo]))}
+function hash(str){let h=2166136261;for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619)}return (h>>>0).toString(36)}
+function normalize(r){if(!r||typeof r!=='object'||!r.store||!r.date)return null;return {...r,id:idFor(r),store:String(r.store),mode:r.mode==='3P'?'3P':'通常',course:n(r.course),base:n(r.base),threeFee:n(r.threeFee),travel:blank(r.travel)?null:n(r.travel),nomination:n(r.nomination),change:n(r.change),extMinutes:n(r.extMinutes),ext:blank(r.ext)?null:n(r.ext),optionsTotal:n(r.optionsTotal),discount:n(r.discount),surcharge:n(r.surcharge),total:n(r.total),complete:r.complete===true||r.complete==='true',serviceDate:r.serviceDate||null};}
+function merge(incoming){const original=records.length, map=new Map(records.map(r=>[r.id,r]));let added=0,updated=0;for(const r of incoming){const normalized=normalize(r);if(!normalized)continue;if(map.has(normalized.id))updated++;else added++;map.set(normalized.id,normalized)}records=Array.from(map.values()).sort((a,b)=>String(a.date).localeCompare(String(b.date)));if(!save(KEYS.records,records))throw new Error('ブラウザに保存できませんでした。');updateOptions();renderDashboard();$('recordStats').textContent=records.length+'件を保持（今回追加'+added+'件・既存'+updated+'件）。';return {added,updated,original}}
+
+// Records from the accounting page are the source of truth for shared records.
+// Preserve separately imported salary-only records and remove deleted accounting records.
+const ACCOUNT_RECORD_KEY='tenpo_kaikei_records_v1';
+const SYNC_IDS_KEY='private_salary_synced_account_ids_v1';
+function syncFromAccounting(){
+ let source;
+ try{const raw=localStorage.getItem(ACCOUNT_RECORD_KEY);if(raw===null)return false;source=JSON.parse(raw)}catch(e){return false}
+ if(!Array.isArray(source))return false;
+ const prev=Array.isArray(safeStore(SYNC_IDS_KEY))?safeStore(SYNC_IDS_KEY):[];
+ const prevIds=new Set(prev.map(String));
+ const manual=records.filter(r=>!prevIds.has(String(r.id)));
+ const incoming=source.map(normalize).filter(Boolean);
+ const next=new Map(manual.map(r=>[String(r.id),r]));
+ for(const r of incoming)next.set(String(r.id),r);
+ const merged=Array.from(next.values()).sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+ if(JSON.stringify(merged)===JSON.stringify(records) && prev.length===incoming.length)return false;
+ try{
+  localStorage.setItem(KEYS.records,JSON.stringify(merged));
+  localStorage.setItem(SYNC_IDS_KEY,JSON.stringify(incoming.map(r=>String(r.id))));
+ }catch(e){return false}
+ records=merged;
+ updateOptions();renderDashboard();
+ if($('recordStats'))$('recordStats').textContent=records.length+'件（会計アプリと連携済み）';
+ return true;
+}
+window.addEventListener('storage',e=>{if(e.key===ACCOUNT_RECORD_KEY)syncFromAccounting()});
+window.addEventListener('focus',()=>syncFromAccounting());
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncFromAccounting()});
+
+function parseCsv(text){const data=[],rows=[];let inQuotes=false,cur='',line=[];text=text.replace(/^\ufeff/,'');for(let i=0;i<text.length;i++){const ch=text[i];if(inQuotes){if(ch==='"'&&text[i+1]==='"'){cur+='"';i++}else if(ch==='"')inQuotes=false;else cur+=ch}else if(ch==='"')inQuotes=true;else if(ch===','){line.push(cur);cur=''}else if(ch==='\n'){line.push(cur.replace(/\r$/,''));rows.push(line);line=[];cur=''}else cur+=ch}if(cur||line.length){line.push(cur);rows.push(line)}if(!rows.length)return [];const heads=rows.shift();const idx=Object.fromEntries(heads.map((k,i)=>[k,i]));const get=(r,name)=>r[idx[name]]??'';if(!heads.includes('店舗')||!heads.includes('お会計合計'))throw Error('会計アプリのCSVではありません。');for(const r of rows){if(!r.some(Boolean))continue;const obj={date:get(r,'保存日時'),serviceDate:get(r,'利用日'),store:get(r,'店舗'),mode:get(r,'形態'),course:get(r,'コース(分)'),area:get(r,'地域'),base:get(r,'コース料金'),threeFee:get(r,'3P料金'),travel:get(r,'交通費'),nomination:get(r,'指名料'),change:get(r,'チェンジ'),extMinutes:get(r,'延長(分)'),ext:get(r,'延長料金'),optionsTotal:get(r,'オプション合計'),discount:get(r,'値引き'),surcharge:get(r,'その他追加'),total:get(r,'お会計合計'),received:get(r,'預かり金'),complete:get(r,'料金確定'),memo:get(r,'メモ'),optionsDescription:get(r,'オプション内訳')};data.push(obj)}return data}
+function download(name,str,mime){const blob=new Blob([str],{type:mime});const a=document.createElement('a'),url=URL.createObjectURL(blob);a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1300)}
+function shops(){return Array.from(new Set(['NEXUS','もし亀','リセット',...records.map(r=>r.store),...Object.keys(rules)])).filter(Boolean)}
+function updateOptions(){const oldFilter=$('storeFilter').value,oldRule=$('ruleStore').value;$('storeFilter').replaceChildren(new Option('すべての店舗','all'));$('ruleStore').replaceChildren();for(const name of shops()){$('storeFilter').add(new Option(name,name));$('ruleStore').add(new Option(name,name))}if(shops().includes(oldFilter))$('storeFilter').value=oldFilter;else $('storeFilter').value='all';if(shops().includes(oldRule))$('ruleStore').value=oldRule;else $('ruleStore').value=selectedRuleStore;}
+function ruleFor(store){return {...(rules[store]||{}),nomPct:100}}
+function pay(r){const conf=ruleFor(r.store),key=r.mode+'|'+r.course;let missing=[],breakdown=[],sum=0;if(r.store==='リセット'&&r.mode==='3P')missing.push('リセットは3P対象外');
+function add(label,value){sum+=value;breakdown.push([label,value])}
+if(!r.complete)missing.push('会計未確定');
+// 「最初から190分予約」と「160分＋途中延長30分」は、元コースと延長欄で区別する。
+// 予約190分 → 通常|190固定 17,500円。160分＋30分 → 通常|160固定15,000円 + 延長の50% = 19,000円。
+const fixed=conf.courseBack?.[key],percent=conf.coursePct;
+if(!blank(fixed)){add('コースバック',n(fixed))}else if(!blank(percent)){const v=Math.round((r.base+r.threeFee)*n(percent)/100);add('コース歩合',v)}else missing.push(r.mode+' '+r.course+'分のコースバック');
+if(r.extMinutes>0){
+  // 延長バックは全店舗共通：実際の延長請求額の50％。
+  // 通常: NEXUS/もし亀 8,000→4,000円、リセット 6,000→3,000円。
+  // 3P提供店の2人分延長 16,000→8,000円。
+  if(r.ext===null)missing.push('会計の延長料金');
+  else {const v=Math.round(r.ext/2);add('延長料金の50％',v);}
+}
+// リセットの4オプションは100％バック確定。衣装チェンジ等は取り分未確認。
+if(r.store==='リセット'&&r.optionsTotal){
+ let opts=Array.isArray(r.options)&&r.options.length?r.options:[];
+ if(!opts.length&&r.optionsDescription){
+   opts=String(r.optionsDescription).split(/\s*\/\s*/).map(text=>{
+     const match=text.match(/^(.+?)×(\d+):([\d.]+)$/);
+     return match?{name:match[1],qty:Number(match[2]),total:Number(match[3])}:null
+   }).filter(Boolean);
+ }
+ if(!opts.length){
+   if(blank(conf.optionsPct))missing.push('オプション別明細');
+   else add('オプション（明細なし）',Math.round(n(r.optionsTotal)*n(conf.optionsPct)/100));
+ }else{
+   let full=0,other=0;
+   for(const opt of opts){const amount=Number.isFinite(Number(opt.total))?n(opt.total):n(opt.price)*n(opt.qty||1);if(RESET_FULL_OPTIONS.has(String(opt.name)))full+=amount;else other+=amount}
+   if(full)add('フルバック対象オプション',full);
+   // 記録の内訳と合計がずれている場合も未分類に含める。
+   other+=Math.max(0,n(r.optionsTotal)-full-other);
+   if(other){if(blank(conf.optionsPct))missing.push('衣装チェンジ等のオプション取り分');else add('その他のオプション',Math.round(other*n(conf.optionsPct)/100))}
+ }
+}
+const comps=[['指名料',r.nomination,'nomPct'],...(r.store==='リセット'?[]:[['オプション',r.optionsTotal,'optionsPct']]),['チェンジ料',r.change,'changePct'],['交通費',r.travel,'travelPct'],['その他追加',r.surcharge,'extraPct'],['値引き（控除）',r.discount,'discountPct']];
+for(const [title,raw,k] of comps){const amount=n(raw);if(!amount)continue;const pct=conf[k];if(blank(pct)){missing.push(title+'の取り分');continue}const value=Math.round(amount*n(pct)/100)*(k==='discountPct'?-1:1);add(title,value)}
+// 雑費はお客様のコース料金＋指名料の合計に掛ける（バック額ではない）。
+// 3Pは r.base（加算部分）＋ r.threeFee（専用／追加料金）を合算。オプション・延長・交通費は対象外。
+const feeBase=Math.max(0,n(r.base)+n(r.threeFee)+n(r.nomination));
+const count=diaryCounts[useDay(r)];
+if(!Number.isInteger(count)||count<0)missing.push('日記投稿数');
+else {const pct=count>=6?5:10;add('雑費控除 '+pct+'％（コース料金＋指名料 '+Y(feeBase)+'・日記'+count+'件）',-Math.round(feeBase*pct/100))}
+if(r.travel===null)missing.push('会計交通費');if(r.extMinutes>0&&r.ext===null)missing.push('会計延長料金');
+return {value:missing.length?null:Math.round(sum),knownSum:Math.round(sum),missing,breakdown}
+}
+function periodRecords(){const month=$('month').value,f=$('storeFilter').value;return records.filter(r=>useDay(r).slice(0,7)===month&&(f==='all'||r.store===f))}
+function periodAdjustments(){const m=$('month').value,f=$('storeFilter').value;return adjustments.filter(a=>a.day.slice(0,7)===m&&(f==='all'||a.store===f))}
+function summarize(items,adj){const computed=items.map(r=>({r,pay:pay(r)})),pending=computed.filter(x=>x.pay.value===null).length;const known=computed.reduce((s,x)=>s+(x.pay.value??0),0),delta=adj.reduce((s,a)=>s+n(a.amount),0);return {count:items.length,sales:items.reduce((s,r)=>s+n(r.total),0),pending,known:known+delta,complete:pending===0,computed,adjust:delta}}
+function formatAmount(s){return s.complete?Y(s.known):Y(s.known)+'（計算済み）＋要入力 '+s.pending+'件'}
+// 足りない設定を入力方法とセットで表示する。未知のバック率は勝手に補完しない。
+function missingInstruction(reason,store){
+ if(reason==='指名料の取り分')return '指名料は全額バックとして自動計算します。会計記録の指名料を確認してください。';
+ if(reason==='日記投稿数')return 'この日の日記投稿数を入力して「この日の日記件数を保存」を押してください。';
+ if(reason==='会計未確定')return '会計アプリで未入力の料金を確認して保存し、履歴を読み込み直してください。';
+ if(reason==='会計交通費'||reason==='会計交通費' || reason==='会計の交通費')return '会計アプリで交通費を入力し、会計記録を読み込み直してください。';
+ if(reason==='会計の延長料金'||reason==='会計延長料金')return '会計アプリで延長料金を入力し、履歴を読み込み直してください。';
+ if(reason.includes('コースバック'))return store+'の'+reason+'を入力してください（給料設定 → '+store+' → コースごとの自分のバック）。';
+ if(reason.includes('取り分'))return store+'の「'+reason.replace('の取り分','')+'」のバック率を入力してください（給料設定 → '+store+'）。';
+ if(reason==='オプション別明細')return '会計アプリでオプションの明細を確認して読み込み直すか、給料設定でオプションのバック率を設定してください。';
+ if(reason==='リセットは3P対象外')return 'リセットは3Pを扱わないため、会計アプリの店舗・形態を確認してください。';
+ return reason+'を確認してください。';
+}
+function missingSummary(items){let results=[];for(const r of items){const p=pay(r);for(const m of p.missing){const msg=missingInstruction(m,r.store);if(!results.includes(msg))results.push(msg)}}return results}
+function openRuleFor(store){$('ruleStore').value=store;selectedRuleStore=store;setTab('rules');window.scrollTo({top:0,behavior:'smooth'});}
+
+function dashboardDayList(){const rr=periodRecords(),aa=periodAdjustments(),days=new Map();for(const r of rr){const day=useDay(r);if(!days.has(day))days.set(day,{items:[],adjs:[]});days.get(day).items.push(r)}for(const a of aa){if(!days.has(a.day))days.set(a.day,{items:[],adjs:[]});days.get(a.day).adjs.push(a)}return [...days.entries()].sort(([a],[b])=>b.localeCompare(a)).map(([day,v])=>({day,...v,summary:summarize(v.items,v.adjs)}))}
+function renderDashboard(){const items=periodRecords(),adj=periodAdjustments(),all=summarize(items,adj);$('jobCount').textContent=all.count+'件';$('salesTotal').textContent=Y(all.sales);$('salaryTotal').textContent=Y(all.known);$('pendingNote').textContent=all.pending?'要入力 '+all.pending+'件：'+missingSummary(items).slice(0,3).join(' ')+(missingSummary(items).length>3?' ほかにも入力項目があります。':''):items.length?'対象の会計はすべて給料計算できています。':'会計記録を読み込んでください。';$('lastUpdate').textContent=records.length?'保存済み '+records.length+'件。利用日がない記録は保存した日（日本時間）で集計します。':'記録を読み込むには「記録を読み込む」タブを開いてください。';const container=$('days');container.replaceChildren();const groups=dashboardDayList();if(!groups.length){container.className='empty';container.textContent='この期間の会計記録がありません。';$('detailPanel').classList.add('hidden');return}container.className='';for(const g of groups){const b=document.createElement('button');b.className='day';b.setAttribute('aria-pressed',String(selectedDay===g.day));const top=document.createElement('div');top.className='row';const date=document.createElement('strong');date.textContent=g.day+'　'+g.summary.count+'件'+(Number.isInteger(diaryCounts[g.day])?'／日記'+diaryCounts[g.day]+'件':'／日記未登録');const sales=document.createElement('span');sales.className='muted';sales.textContent='売上 '+Y(g.summary.sales);top.append(date,sales);const below=document.createElement('div');below.className='row';below.style.marginTop='8px';const lbl=document.createElement('span');lbl.className='muted';lbl.textContent='自分の給料';const payVal=document.createElement('span');payVal.className='amount'+(g.summary.pending?' pending':'');payVal.textContent=formatAmount(g.summary);below.append(lbl,payVal);b.append(top,below);b.onclick=()=>{selectedDay=g.day;renderDashboard()};container.append(b)}if(!groups.some(g=>g.day===selectedDay))selectedDay=groups[0].day;for(const b of container.children)b.setAttribute('aria-pressed',String(b.firstChild.firstChild.textContent.startsWith(selectedDay)));renderDayDetail(groups.find(g=>g.day===selectedDay));}
+function renderDayDetail(g){const panel=$('detailPanel');if(!g){panel.classList.add('hidden');return}panel.classList.remove('hidden');$('detailTitle').textContent=g.day+' の明細';$('detailCount').textContent=g.items.length+'件';
+const count=diaryCounts[g.day];$('diaryCount').value=Number.isInteger(count)?String(count):'';$('diaryRateLabel').textContent=Number.isInteger(count)?(count>=6?'5％':'10％'):'未設定';
+$('saveDiary').onclick=()=>{const raw=$('diaryCount').value.trim();if(!/^\d+$/.test(raw)){alert('日記件数は0以上の整数で入力してください。');return;}diaryCounts[g.day]=Number(raw);if(!save(KEYS.diary,diaryCounts)){alert('保存できませんでした。');return;}renderDashboard();};const sum=$('daySummary');sum.replaceChildren();for(const [title,v] of [['会計売上',Y(g.summary.sales)],['給料の集計',formatAmount(g.summary)],['調整額',Y(g.summary.adjust)]]){const row=document.createElement('div');row.className='line';const a=document.createElement('span'),b=document.createElement('strong');a.textContent=title;b.textContent=v;row.append(a,b);sum.append(row)}const el=$('detailRecords');el.replaceChildren();for(const r of g.items){const p=pay(r);const box=document.createElement('div');box.className='record';const title=document.createElement('div');title.className='row';const name=document.createElement('div');name.className='title';name.textContent=r.store+'　'+r.mode+'・'+r.course+'分';const amount=document.createElement('strong');amount.textContent=p.value===null?'入力が必要':Y(p.value);title.append(name,amount);const second=document.createElement('div');second.className='muted';second.textContent='お客様会計 '+Y(r.total)+' ／ '+(r.area||'地域未入力');box.append(title,second);
+ if(p.missing.length){
+  const issues=document.createElement('div');issues.className='warning';issues.style.marginTop='8px';
+  const cap=document.createElement('strong');cap.textContent='入力が必要な項目';issues.append(cap);
+  for(const m of [...new Set(p.missing)]){const issue=document.createElement('div');issue.style.marginTop='5px';issue.textContent='・'+missingInstruction(m,r.store);issues.append(issue)}
+  const needsRule=p.missing.some(m=>m.includes('取り分')||m.includes('コースバック'));
+  if(needsRule){const go=document.createElement('button');go.type='button';go.className='button';go.style.marginTop='9px';go.style.width='100%';go.textContent=r.store+'の給料設定を開く';go.onclick=()=>openRuleFor(r.store);issues.append(go)}
+  box.append(issues);
+ }
+ const detail=document.createElement('details');const trigger=document.createElement('summary');trigger.className='small';trigger.textContent='給料内訳を見る';const content=document.createElement('div');content.className='indent';for(const [label,v] of p.breakdown){const row=document.createElement('div');row.className='line';row.append(document.createTextNode(label),document.createTextNode(Y(v)));content.append(row)}if(p.missing.length){const warning=document.createElement('p');warning.className='pending small';warning.textContent='確認・入力してください：'+p.missing.map(m=>missingInstruction(m,r.store)).join('／');content.append(warning)}detail.append(trigger,content);box.append(detail);el.append(box)}if(!g.items.length){const txt=document.createElement('p');txt.className='muted';txt.textContent='この日は調整額のみ登録されています。';el.append(txt)}
+const selector=$('adjustStore');const last=selector.value;selector.replaceChildren();const present=Array.from(new Set([...g.items.map(x=>x.store),...g.adjs.map(x=>x.store)]));const options=present.length?present:shops();for(const name of options)selector.add(new Option(name,name));if(options.includes(last))selector.value=last;renderAdjustments(g.adjs)}
+function renderAdjustments(adjs){const el=$('adjustmentsList');el.replaceChildren();if(!adjs.length){el.textContent='調整の記録なし';el.className='muted';return}el.className='';for(const a of adjs){const div=document.createElement('div');div.className='line';const left=document.createElement('div');left.textContent=a.store+'　'+(a.memo||'給料調整');const right=document.createElement('div');const amount=document.createElement('strong');amount.textContent=(a.amount>=0?'+':'')+Y(a.amount);const del=document.createElement('button');del.className='button';del.style.marginLeft='7px';del.style.padding='4px 8px';del.textContent='削除';del.onclick=()=>{if(!confirm('この給料調整を削除しますか？'))return;adjustments=adjustments.filter(x=>x.id!==a.id);save(KEYS.adjustments,adjustments);renderDashboard()};right.append(amount,del);div.append(left,right);el.append(div)}}
+function listCourses(name){const preset=COURSES[name]||{},out=new Set();for(const [mode,list] of Object.entries(preset))for(const c of list)out.add(mode+'|'+c);for(const r of records.filter(r=>r.store===name&&!(name==='リセット'&&r.mode==='3P')))out.add(r.mode+'|'+r.course);return [...out].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}))}
+function renderRules(){const name=$('ruleStore').value||selectedRuleStore;selectedRuleStore=name;const conf=ruleFor(name),table=$('courseRules');table.replaceChildren();const t=document.createElement('table');t.className='rtable';t.innerHTML='<thead><tr><th>形態</th><th>コース</th><th>自分のバック（円）</th></tr></thead><tbody></tbody>';for(const key of listCourses(name)){const [mode,course]=key.split('|'),tr=document.createElement('tr');const a=document.createElement('td'),b=document.createElement('td'),c=document.createElement('td');a.textContent=mode;b.textContent=course+'分';const input=document.createElement('input');input.type='number';input.min='0';input.className='field';input.placeholder='未設定';input.value=conf.courseBack?.[key]??'';input.dataset.courseKey=key;c.append(input);tr.append(a,b,c);t.tBodies[0].append(tr)}table.append(t);
+for(const id of ['coursePct','extNormal','extThree',...PAY_PCTS.map(x=>x[0])])$(id).value=conf[id]??'';$('nomPct').value=100;$('extensionMode').value='half';$('nexus190Panel').classList.toggle('hidden',name!=='NEXUS');$('fixedExtensionFields').classList.add('hidden');}
+function setupPct(){for(const [id,label] of PAY_PCTS){const wrap=document.createElement('div');const l=document.createElement('label');l.htmlFor=id;l.textContent=label;const i=document.createElement('input');i.id=id;i.type='number';i.min='0';i.max='100';i.step='0.1';i.className='field';i.placeholder='未設定';wrap.append(l,i);if(id==='nomPct'){i.value='100';i.disabled=true;l.textContent='指名料（100％・全店舗共通）'}$('percentageFields').append(wrap)}}
+function saveRules(){const name=$('ruleStore').value,prev=ruleFor(name),conf={...prev,courseBack:{}};for(const input of $('courseRules').querySelectorAll('input[data-course-key]'))if(input.value.trim()!=='')conf.courseBack[input.dataset.courseKey]=Math.max(0,n(input.value));for(const id of ['coursePct','extNormal','extThree',...PAY_PCTS.map(x=>x[0])]){const v=inputNum(id);conf[id]=v===null?null:Math.max(0,Math.min(id.endsWith('Pct')?100:1000000,v))}conf.extensionMode='half';conf.nomPct=100;rules[name]=conf;const ok=save(KEYS.rules,rules);$('ruleStatus').textContent=ok?'給料ルールを保存しました。日別集計に反映されます。':'保存できませんでした。';renderDashboard()}
+function csvCell(s){return '"'+String(s??'').replaceAll('"','""')+'"'}
+function exportDaily(){const rows=[['日付','日記件数','雑費率','件数','会計売上','給料計算済み額','未計算件数','調整額','確定状態']];for(const d of dashboardDayList()){const s=d.summary;rows.push([d.day,Number.isInteger(diaryCounts[d.day])?diaryCounts[d.day]:'',Number.isInteger(diaryCounts[d.day])?(diaryCounts[d.day]>=6?5:10):'',s.count,s.sales,s.known,s.pending,s.adjust,s.pending?'入力が必要':'計算済み'])}download('給料日別集計_'+$('month').value+'.csv','\ufeff'+rows.map(r=>r.map(csvCell).join(',')).join('\r\n'),'text/csv;charset=utf-8')}
+function setTab(name){for(const id of ['dashboard','rules','data']){const show=id===name;$(id+'Panel').classList.toggle('hidden',!show);document.querySelector('[data-tab="'+id+'"]').setAttribute('aria-selected',String(show))}if(name==='rules')renderRules();if(name==='dashboard')renderDashboard()}
+for(const button of document.querySelectorAll('[data-tab]'))button.onclick=()=>setTab(button.dataset.tab);
+$('extensionMode').onchange=()=>{$('extensionMode').value='half';$('fixedExtensionFields').classList.add('hidden')};$('month').onchange=renderDashboard;$('storeFilter').onchange=renderDashboard;$('ruleStore').onchange=renderRules;$('saveRules').onclick=saveRules;$('exportSalaryCsv').onclick=exportDaily;
+$('saveAdjustment').onclick=()=>{const amount=inputNum('adjustAmount'),store=$('adjustStore').value;if(amount===null||!Number.isFinite(amount)||!store||!selectedDay){alert('日付・店舗・調整額を入力してください。');return}adjustments.push({id:String(Date.now())+'-'+Math.random().toString(36).slice(2,7),day:selectedDay,store,amount:Math.round(amount),memo:$('adjustMemo').value.trim()});if(!save(KEYS.adjustments,adjustments)){adjustments.pop();alert('保存できませんでした。');return}$('adjustAmount').value='';$('adjustMemo').value='';renderDashboard()};
+$('readLocal').onclick=()=>{try{const source=JSON.parse(localStorage.getItem('tenpo_kaikei_records_v1')||'[]');if(!Array.isArray(source)||!source.length){$('importStatus').textContent='会計記録が見つかりません。会計アプリからJSONまたはCSVを保存して読み込んでください。';return}const result=merge(source);$('importStatus').textContent='会計記録を読み込みました。追加'+result.added+'件・更新'+result.updated+'件。';setTab('dashboard')}catch(e){$('importStatus').textContent='読み込めません：'+e.message}};
+$('importFile').onchange=async()=>{const file=$('importFile').files?.[0];if(!file)return;try{const txt=await file.text();let imported;if(file.name.toLowerCase().endsWith('.csv'))imported=parseCsv(txt);else{const data=JSON.parse(txt);imported=Array.isArray(data)?data:data.records;if(!Array.isArray(imported))throw Error('会計履歴のrecordsが含まれていません')}const result=merge(imported);$('importStatus').textContent='読み込み成功：追加'+result.added+'件、更新'+result.updated+'件。';setTab('dashboard')}catch(e){$('importStatus').textContent='読み込みに失敗：'+e.message}finally{$('importFile').value=''}};
+$('backupSelf').onclick=()=>download('給料管理バックアップ_'+currentMonth()+'.json',JSON.stringify({kind:'private-salary-v1',savedAt:new Date().toISOString(),records,rules,adjustments,diaryCounts},null,2),'application/json');
+$('restoreSelfButton').onclick=()=>$('restoreSelf').click();
+$('restoreSelf').onchange=async()=>{const f=$('restoreSelf').files?.[0];if(!f)return;try{const data=JSON.parse(await f.text());if(data.kind!=='private-salary-v1'||!Array.isArray(data.records)||!Array.isArray(data.adjustments)||!data.rules)throw Error('給料管理用のバックアップではありません');if(!confirm('現在の給料管理データをバックアップの内容で置き換えますか？'))return;records=data.records.map(normalize).filter(Boolean);rules=data.rules;for(const name of ['NEXUS','もし亀','リセット']){if(!rules[name]||typeof rules[name]!=='object')rules[name]={};rules[name].extensionMode='half';rules[name].nomPct=100}for(const conf of Object.values(rules)){if(conf&&typeof conf==='object')conf.nomPct=100}adjustments=data.adjustments;diaryCounts=data.diaryCounts&&typeof data.diaryCounts==='object'?data.diaryCounts:{};if(!save(KEYS.records,records)||!save(KEYS.rules,rules)||!save(KEYS.adjustments,adjustments)||!save(KEYS.diary,diaryCounts))throw Error('保存に失敗しました');updateOptions();renderDashboard();$('backupStatus').textContent='復元しました。'}catch(e){$('backupStatus').textContent='復元できません：'+e.message}finally{$('restoreSelf').value=''}};
+setupPct();updateOptions();renderRules();renderDashboard();syncFromAccounting();$('recordStats').textContent=records.length+'件を保持しています。';
+})();
+</script><script>if("serviceWorker" in navigator && location.protocol==="https:")navigator.serviceWorker.register("./sw.js").catch(()=>{});</script>
+<script>
+(()=>{
+ const KEY='salary_local_pin_pbkdf2_v1';
+ const $=id=>document.getElementById(id);
+ const pin=$('salaryPin'),confirmPin=$('salaryPinConfirm'),message=$('salaryGateInfo'),error=$('salaryGateError'),submit=$('salaryUnlock');
+ let stored=null;
+ try{stored=JSON.parse(localStorage.getItem(KEY))}catch(e){}
+ function render(){
+   const configured=Boolean(stored&&stored.salt&&stored.verifier);
+   message.textContent=configured?'自分で設定した暗証番号を入力してください。':'初回だけ、この端末用の暗証番号を設定します（6〜12桁）。';
+   confirmPin.style.display=configured?'none':'block';
+   submit.textContent=configured?'ロックを解除':'暗証番号を設定';
+   error.textContent='';pin.value='';confirmPin.value='';
+   if(document.visibilityState==='visible')pin.focus();
+ }
+ function bytesToHex(array){return Array.from(array,b=>b.toString(16).padStart(2,'0')).join('')}
+ async function derive(p,salt){
+   const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(p),'PBKDF2',false,['deriveBits']);
+   return bytesToHex(new Uint8Array(await crypto.subtle.deriveBits({name:'PBKDF2',salt:Uint8Array.from(salt.match(/../g).map(x=>parseInt(x,16))),iterations:120000,hash:'SHA-256'},key,256)));
+ }
+ async function action(){
+   const p=pin.value;
+   if(!/^\d{6,12}$/.test(p)){error.textContent='数字6〜12桁で入力してください。';return}
+   submit.disabled=true;
+   try{
+     if(!stored){
+       if(p!==confirmPin.value){error.textContent='確認用の番号が一致しません。';return}
+       const salt=bytesToHex(crypto.getRandomValues(new Uint8Array(16)));
+       stored={salt,verifier:await derive(p,salt)};
+       localStorage.setItem(KEY,JSON.stringify(stored));
+     }else if(await derive(p,stored.salt)!==stored.verifier){error.textContent='暗証番号が違います。';return}
+     document.body.classList.remove('salary-locked');pin.value='';confirmPin.value='';error.textContent='';
+     window.dispatchEvent(new Event('focus'));
+   }catch(e){error.textContent='暗証番号の設定・確認ができませんでした。';}
+   finally{submit.disabled=false}
+ }
+ submit.addEventListener('click',action);
+ pin.addEventListener('keydown',e=>{if(e.key==='Enter')action()});
+ confirmPin.addEventListener('keydown',e=>{if(e.key==='Enter')action()});
+ $('lockSalaryNow').addEventListener('click',()=>{document.body.classList.add('salary-locked');render()});
+ // Another app or tab should never display salary by mistake on return.
+ document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'){document.body.classList.add('salary-locked');render()}});
+ render();
+})();
+</script>
+</body></html>
