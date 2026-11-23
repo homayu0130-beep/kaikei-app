@@ -6,18 +6,12 @@
   "scope": "./",
   "display": "standalone",
   "background_color": "#f6f3ed",
-  "theme_color": "#473729",
+  "theme_color": "#493c30",
   "icons": [
     {
-      "src": "./icon-accounting-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "./icon-accounting-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
       "purpose": "any maskable"
     }
   ]
