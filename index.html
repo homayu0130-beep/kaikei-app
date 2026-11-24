@@ -240,7 +240,8 @@ const verifiedHotels=[
  {name:'リゾパラ',aliases:['ホテル リゾパラ','ホテルリゾパラ','HOTEL RESOPARA','RESOPARA'],address:'愛知県名古屋市千種区内山3-11-27',areaName:'千種区',areaGroup:'濃い金色｜無料〜',travel:0,fromDirectory:true},
  {name:'チュチュ',aliases:['ホテル チュチュ','ホテルチュチュ','チュチュ今池','チュチュ今池店','マッセリゾート','ホテル マッセリゾート','マッセリゾート今池店','ホテル マッセリゾート今池店'],address:'愛知県名古屋市千種区今池5-32-3',areaName:'今池',areaGroup:'濃い金色｜無料〜',travel:0,fromDirectory:true},
  {name:'パラドール',aliases:['ホテル パラドール','ホテルパラドール','PARADOR','ホテルパラドール名駅南'],address:'愛知県名古屋市中村区名駅南1-6-5',areaName:'中村区',areaGroup:'オレンジ｜1,000円〜',travel:1000,fromDirectory:true},
- {name:'名古屋栄ワシントンホテルプラザ',aliases:['ワシントンプラザ栄','ワシントンホテルプラザ栄','栄ワシントンホテルプラザ','栄ワシントン','ワシントン栄','名古屋栄ワシントンプラザ','ワシントンホテル栄'],address:'愛知県名古屋市中区栄3-1-32',areaName:'中区',areaGroup:'オレンジ｜1,000円〜',travel:1000,fromDirectory:true}
+ {name:'名古屋栄ワシントンホテルプラザ',aliases:['ワシントンプラザ栄','ワシントンホテルプラザ栄','栄ワシントンホテルプラザ','栄ワシントン','ワシントン栄','名古屋栄ワシントンプラザ','ワシントンホテル栄'],address:'愛知県名古屋市中区栄3-1-32',areaName:'中区',areaGroup:'オレンジ｜1,000円〜',travel:1000,fromDirectory:true},
+ {name:'セッティングザシーン栄店',aliases:['scene栄','SCENE栄','シーン栄','ザシーン栄','セッティングザシーン栄','ホテルシーン栄','ホテルザシーン栄','SETTING THE SCENE栄'],address:'愛知県名古屋市中区栄5-3-17',areaName:'中区',areaGroup:'オレンジ｜1,000円〜',travel:1000,fromDirectory:true}
 ];
 let hotelEntries=[],lastAutoHotelKey='';
 try{const saved=JSON.parse(localStorage.getItem(HOTEL_KEY)||'[]');if(Array.isArray(saved))hotelEntries=saved.filter(h=>h&&typeof h.name==='string'&&h.name.trim()&&typeof h.travel==='number'&&Number.isFinite(h.travel)&&h.travel>=0&&h.travel<=999999).slice(-300)}catch(e){}
@@ -616,7 +617,7 @@ function renderLinePreview(c){
  };
  add('店舗',lineDraft.store||'手動で確認');
  add('開始時間',lineDraft.time||'記載なし');
- add('コース',lineDraft.course?lineDraft.course+'分':'手動で確認');
+ add('コース',lineDraft.course?(lineDraft.course+'分'+(lineDraft.courseDecomposition?'（'+lineDraft.courseDecomposition+'）':'')):'手動で確認');
  if(lineDraft.name)add('名前',lineDraft.name);
  if(lineDraft.memberCode)add('会員番号',lineDraft.memberCode);
  add('指名・リピ',lineDraft.visitType==='初回指名'?'初回指名（料金なし）':lineDraft.visitType==='リピート'?'リピート（料金あり）':'記載なし・手動確認');
@@ -663,8 +664,21 @@ function importLineBooking(append){
   $('nom').checked=!!p.nomination;
  }else if(p.three&&si!==2){three=true;renderMode();}
  if(p.course){
-  const index=store().courses.findIndex(c=>c.m===p.course&&(!three||si!==0||c.threeFee!==null));
-  if(index>=0){ci=index;renderCourses();fillThree();}
+  // Prefer an exact listed course. Only then try a base course plus 30-minute extensions.
+  let index=store().courses.findIndex(c=>c.m===p.course&&(!three||si!==0||c.threeFee!==null));
+  let extension=0;
+  if(index<0){
+   const valid=store().courses.map((c,i)=>({c,i})).filter(({c})=>c.m<p.course&&(p.course-c.m)%30===0&&(!three||si!==0||c.threeFee!==null));
+   if(valid.length){valid.sort((a,b)=>b.c.m-a.c.m);index=valid[0].i;extension=p.course-valid[0].c.m;}
+  }
+  if(index>=0){
+   ci=index;renderCourses();fillThree();
+   if(!append||p.course!==undefined)$('extMins').value=String(extension);
+   p.courseDecomposition=extension?store().courses[index].m+'分＋延長'+extension+'分':'';
+  }else{
+   p.courseDecomposition='コース未登録・要確認';
+   $('lineImportStatus').textContent='LINEの'+p.course+'分に合うコースが見つかりません。手動で選択してください。';
+  }
  }
  if(p.nomination!==undefined)$('nom').checked=Boolean(p.nomination);
  $('nomCountWrap').classList.toggle('hidden',!three||!$('nom').checked);
