@@ -215,7 +215,10 @@ function saveRecords(){try{localStorage.setItem(REC_KEY,JSON.stringify(records))
 const hotelKey=name=>String(name||'').normalize('NFKC').trim().replace(/\s+/g,' ').toLowerCase();
 const verifiedHotels=[
  {name:'オリエンタルホテル',aliases:['ホテルオリエンタル'],address:'愛知県名古屋市東区東桜2-16-49',areaName:'東区',areaGroup:'オレンジ｜1,000円〜',travel:1000,fromDirectory:true},
- {name:'Gホテル',aliases:['G HOTEL','Gホテル一宮','G HOTEL一宮店'],address:'愛知県稲沢市赤池寺東町24',areaName:'稲沢市',areaGroup:'黄緑色｜3,000円〜',travel:3000,fromDirectory:true}
+ {name:'Gホテル',aliases:['G HOTEL','Gホテル一宮','G HOTEL一宮店'],address:'愛知県稲沢市赤池寺東町24',areaName:'稲沢市',areaGroup:'黄緑色｜3,000円〜',travel:3000,fromDirectory:true},
+ {name:'リゾパラ',aliases:['ホテル リゾパラ','ホテルリゾパラ','HOTEL RESOPARA','RESOPARA'],address:'愛知県名古屋市千種区内山3-11-27',areaName:'千種区',areaGroup:'濃い金色｜無料〜',travel:0,fromDirectory:true},
+ {name:'チュチュ',aliases:['ホテル チュチュ','ホテルチュチュ','チュチュ今池','チュチュ今池店','マッセリゾート','ホテル マッセリゾート','マッセリゾート今池店','ホテル マッセリゾート今池店'],address:'愛知県名古屋市千種区今池5-32-3',areaName:'今池',areaGroup:'濃い金色｜無料〜',travel:0,fromDirectory:true},
+ {name:'パラドール',aliases:['ホテル パラドール','ホテルパラドール','PARADOR','ホテルパラドール名駅南'],address:'愛知県名古屋市中村区名駅南1-6-5',areaName:'中村区',areaGroup:'オレンジ｜1,000円〜',travel:1000,fromDirectory:true}
 ];
 let hotelEntries=[],lastAutoHotelKey='';
 try{const saved=JSON.parse(localStorage.getItem(HOTEL_KEY)||'[]');if(Array.isArray(saved))hotelEntries=saved.filter(h=>h&&typeof h.name==='string'&&h.name.trim()&&typeof h.travel==='number'&&Number.isFinite(h.travel)&&h.travel>=0&&h.travel<=999999).slice(-300)}catch(e){}
