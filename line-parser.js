@@ -18,7 +18,9 @@
   else if(/ネクサス|ネク|nexus/i.test(all))p.store="NEXUS";
   else if(/もし亀|もしカメ|亀|かめ|カメ/.test(all))p.store="もし亀";
   else if(/アクア|aqua/i.test(all))p.store="アクア";
-  if(/指名|リピ(?:ート)?/.test(all))p.nomination=true;
+  // 「指名」だけなら初回予約（指名料0円）。2回目以降の「リピ」のときだけ有料。
+  if(/リピ(?:ート)?/.test(all)){p.nomination=true;p.visitType="リピート";}
+  else if(/指名/.test(all)){p.nomination=false;p.visitType="初回指名";}
   if(/(?:3\s*[PＰ]|3ピ|スリーピー)/i.test(all))p.three=true;
   const placePattern=/(?:愛知県|名古屋市|(?:千種|昭和|天白|名東|中村|中川|瑞穂|守山|熱田|中|東|西|北|南|緑|港)区|(?:一宮|稲沢|春日井|清須|北名古屋|長久手|尾張旭|小牧|岩倉|江南|犬山|あま)市|ホテル|ラブホ|マンション|アパート|自宅|住所|お届け先|行き先|号室|[0-9]{3,4}号|丁目|天白[0-9]|一宮ラブホ)/i;
   function isPlace(line){
