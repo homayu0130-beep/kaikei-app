@@ -72,16 +72,17 @@
 <section class="card">
 <div class="sectionTitle"><b>2</b> お届け先・交通費（全店舗共通）</div>
 
-<label class="label" for="hotelName">ホテル名（任意・登録すれば次回から自動入力）</label>
+<label class="label" for="hotelName">ホテル名（名前だけで地域・交通費を自動判定）</label>
 <input class="input" id="hotelName" list="hotelSuggestions" placeholder="例：オリエンタルホテル、Gホテル" autocomplete="off" maxlength="100" />
 <datalist id="hotelSuggestions"></datalist>
 <div class="row2" style="margin-top:9px">
-<button class="btn gold" type="button" id="hotelResolve">ホテル名から所在地を検索</button>
+<button class="btn gold" type="button" id="hotelResolve">ホテル名で住所を自動検索</button>
 <button class="btn" type="button" id="hotelGoogleMaps">Googleマップで探す</button>
 </div>
 <label class="label" for="hotelAddress">住所（Googleマップの住所を貼ると交通費を自動判定）</label>
 <input class="input" id="hotelAddress" maxlength="200" autocomplete="off" placeholder="例：愛知県名古屋市東区東桜2-16-49" />
-<p id="hotelPlaceStatus" class="muted" role="status" aria-live="polite">ホテル名を入力して検索するか、調べた住所を貼り付けてください。</p>
+<p id="hotelPlaceStatus" class="muted" role="status" aria-live="polite">登録済みホテルは名前を入れるだけで判定。未登録ホテルも上の自動検索で住所を探せます。</p>
+<p class="muted" style="margin-top:5px">未登録ホテルの自動検索ではホテル名を外部の地図サービスへ送ります。<a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">地図データ © OpenStreetMap contributors</a></p>
 <div id="hotelQuickButtons" class="row2" style="margin-top:9px"></div>
 <p id="hotelFeedback" class="muted" role="status" aria-live="polite">初めてのホテルは地域を選ぶか交通費を入力し、登録してください。同名のホテルがある場合は支店名や地域名も入れてください。</p>
 <label class="label" for="search">地名検索</label><input class="input" id="search" placeholder="例：清須、大治、中区" autocomplete="off" />
@@ -238,7 +239,8 @@ const verifiedHotels=[
  {name:'Gホテル',aliases:['G HOTEL','Gホテル一宮','G HOTEL一宮店'],address:'愛知県稲沢市赤池寺東町24',areaName:'稲沢市',areaGroup:'黄緑色｜3,000円〜',travel:3000,fromDirectory:true},
  {name:'リゾパラ',aliases:['ホテル リゾパラ','ホテルリゾパラ','HOTEL RESOPARA','RESOPARA'],address:'愛知県名古屋市千種区内山3-11-27',areaName:'千種区',areaGroup:'濃い金色｜無料〜',travel:0,fromDirectory:true},
  {name:'チュチュ',aliases:['ホテル チュチュ','ホテルチュチュ','チュチュ今池','チュチュ今池店','マッセリゾート','ホテル マッセリゾート','マッセリゾート今池店','ホテル マッセリゾート今池店'],address:'愛知県名古屋市千種区今池5-32-3',areaName:'今池',areaGroup:'濃い金色｜無料〜',travel:0,fromDirectory:true},
- {name:'パラドール',aliases:['ホテル パラドール','ホテルパラドール','PARADOR','ホテルパラドール名駅南'],address:'愛知県名古屋市中村区名駅南1-6-5',areaName:'中村区',areaGroup:'オレンジ｜1,000円〜',travel:1000,fromDirectory:true}
+ {name:'パラドール',aliases:['ホテル パラドール','ホテルパラドール','PARADOR','ホテルパラドール名駅南'],address:'愛知県名古屋市中村区名駅南1-6-5',areaName:'中村区',areaGroup:'オレンジ｜1,000円〜',travel:1000,fromDirectory:true},
+ {name:'名古屋栄ワシントンホテルプラザ',aliases:['ワシントンプラザ栄','ワシントンホテルプラザ栄','栄ワシントンホテルプラザ','栄ワシントン','ワシントン栄','名古屋栄ワシントンプラザ','ワシントンホテル栄'],address:'愛知県名古屋市中区栄3-1-32',areaName:'中区',areaGroup:'オレンジ｜1,000円〜',travel:1000,fromDirectory:true}
 ];
 let hotelEntries=[],lastAutoHotelKey='';
 try{const saved=JSON.parse(localStorage.getItem(HOTEL_KEY)||'[]');if(Array.isArray(saved))hotelEntries=saved.filter(h=>h&&typeof h.name==='string'&&h.name.trim()&&typeof h.travel==='number'&&Number.isFinite(h.travel)&&h.travel>=0&&h.travel<=999999).slice(-300)}catch(e){}
@@ -338,6 +340,66 @@ function useHotelAddress(){
  lastAutoHotelKey=hotelKey($('hotelName').value);
  $('hotelPlaceStatus').textContent='判定：'+place+'／'+group.title+(group.fee===null?'。金額を確認してください。':'。最低額なので必要なら修正してください。');
  renderZones();renderAll();return true;
+}
+
+let lastHotelLookupAt=0,hotelLookupBusy=false,hotelLookupSerial=0;
+async function findHotelByName(originalName){
+ const name=String(originalName||'').trim();
+ if(!name||name.length>100)return false;
+ if(lookupHotel(name)){useHotel(name);return true;}
+ if(/(?:自宅|個人宅|住所[:：]|号室|丁目|\d+-\d+|マンション|アパート)/.test(name)){
+  $('hotelFeedback').textContent='住所や自宅は外部に送信しません。住所欄へ直接貼り付けてください。';
+  return false;
+ }
+ if(hotelLookupBusy||Date.now()-lastHotelLookupAt<1500){
+  $('hotelFeedback').textContent='ホテル検索は連続で実行できません。少ししてからもう一度押してください。';
+  return false;
+ }
+ hotelLookupBusy=true;lastHotelLookupAt=Date.now();
+ const requestSerial=++hotelLookupSerial;
+ $('hotelFeedback').textContent='ホテル名から所在地を自動検索中…';
+ try{
+  // An explicit button click or LINE import triggers just one lookup; never auto-complete.
+  const params=new URLSearchParams({q:name+' 愛知県',format:'jsonv2',addressdetails:'1',limit:'5',countrycodes:'jp','accept-language':'ja'});
+  const response=await fetch('https://nominatim.openstreetmap.org/search?'+params.toString(),{mode:'cors',headers:{Accept:'application/json'},referrerPolicy:'strict-origin-when-cross-origin'});
+  if(!response.ok)throw Error('HTTP '+response.status);
+  const results=await response.json();
+  if(requestSerial!==hotelLookupSerial||$('hotelName').value.trim()!==name)return false;
+  const hotels=Array.isArray(results)?results.filter(h=>{
+   const address=h&&h.address;
+   const cat=h?.category||h?.class||'';
+   return h&&address&&(
+    cat==='tourism'&&/hotel|motel|guest_house|hostel|resort|apartment/.test(String(h.type||''))
+    ||/hotel|ホテル|旅館/i.test(String(h.name||''))&&cat!=='highway'
+   );
+  }):[];
+  const matches=hotels.map(h=>{
+   const display=String(h.display_name||'');
+   const addressText=Object.values(h.address||{}).map(String).join(' ');
+   const zone=travelFromAddress(addressText+' '+display);
+   // Never assign a fee from a result with an unclear region.
+   return {h,display,zone};
+  }).filter(x=>x.zone&&x.zone.group.fee!==null);
+  const uniqueAreas=new Set(matches.map(x=>x.zone.place));
+  if(!matches.length||uniqueAreas.size!==1){
+   $('hotelFeedback').textContent=matches.length>1?'同名のホテルが複数あります。支店名も入れて検索してください。':'ホテルの所在地を確定できませんでした。名前に支店名や地域名を付けて再検索してください。';
+   return false;
+  }
+  const match=matches[0],{group,place}=match.zone;
+  const addressText=match.display.slice(0,200);
+  $('hotelAddress').value=addressText;
+  area={name:place,group:group.title,fee:group.fee,direct:group.direct.includes(place)};
+  $('travel').value=String(group.fee);
+  lastAutoHotelKey=hotelKey(name);
+  $('hotelPlaceStatus').textContent='外部地図から所在地を自動確認：'+place+'／'+group.title+'（最低額・要確認）';
+  $('hotelFeedback').textContent=name+'：'+place+'の交通費 '+yen(group.fee)+'〜 を入力しました。確認後に会計保存すると、次から名前だけで使えます。';
+  renderZones();renderAll();return true;
+ }catch(error){
+  if($('hotelName').value.trim()===name)$('hotelFeedback').textContent='自動検索に接続できませんでした。少しして再試行するか、Googleマップで確認してください。';
+  return false;
+ }finally{
+  hotelLookupBusy=false;
+ }
 }
 function searchGoogleHotel(){
  const name=$('hotelName').value.trim();
@@ -531,6 +593,10 @@ function applyLineDestination(destination){
  const hotel=lineHotelFromDestination(text);
  if(hotel){$('hotelName').value=hotel.name;useHotel(hotel.name);return;}
  const guess=lineDestinationArea(text);
+ if(!guess&&/ホテル|hotel|HOTEL|モーテル|ホテルプラザ/.test(text)&&text.length<=100){
+  $('hotelName').value=text;
+  findHotelByName(text);
+ }
  if(guess){
   area={name:guess.place,fee:guess.group.fee,group:guess.group.title,direct:guess.group.direct.includes(guess.place)};
   $('travel').value=guess.group.fee===null?'':String(guess.group.fee);
@@ -646,7 +712,7 @@ $('hotelAddress').addEventListener('input',()=>{if($('hotelAddress').value.trim(
 $('hotelResolve').onclick=()=>{
  const name=$('hotelName').value.trim();
  if(!name){$('hotelFeedback').textContent='ホテル名を入力してください。';return}
- if(!useHotel(name))searchGoogleHotel();
+ if(!useHotel(name))findHotelByName(name);
 };
 $('hotelGoogleMaps').onclick=searchGoogleHotel;
 $('saveHotel').onclick=()=>rememberHotel(true);
