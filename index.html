@@ -506,7 +506,7 @@ function dailyCsv(){
  }
  exportFile('店舗別日次売上_'+tokyoDay(new Date())+'.csv','\uFEFF'+output.map(r=>r.map(csvCell).join(',')).join('\r\n'),'text/csv;charset=utf-8');
 }
-function renderRecords(){const host=$('recordList'),filter=$('recordFilter').value,q=$('recordSearch').value.trim().toLowerCase();host.replaceChildren();const list=records.filter(r=>(filter==='all'||String(r.si)===filter)&&(!q||[r.store,r.area,r.hotelName,r.memo,r.mode].some(x=>String(x||'').toLowerCase().includes(q)))).slice().reverse();$('recordCount').textContent='保存 '+records.length+'件 ／ 表示 '+list.length+'件';if(!list.length){host.append(node('p','muted','該当する記録はありません。会計を保存するとここに表示されます。'));return}
+function renderRecords(){const host=$('recordList'),filter=$('recordFilter').value,q=$('recordSearch').value.trim().toLowerCase();host.replaceChildren();const list=records.filter(r=>(filter==='all'||String(r.si)===filter)&&(!q||[r.store,r.area,r.hotelName,r.memo,r.mode].some(x=>String(x||'').toLowerCase().includes(q)))).slice().reverse();$('recordCount').textContent='保存 '+records.length+'件 ／ 表示 '+list.length+'件';if(!list.length){host.append(node('p','muted','該当する記録はありません。会計を保存するとここに表示されます。'));renderLineSavedTargets();return}
 for(const rec of list){const card=node('div','record'),head=node('div','recHead');const left=node('div');left.append(node('div','',rec.store+'｜'+rec.course+'分 '+rec.mode),node('div','muted',(rec.serviceDate?'利用日 '+rec.serviceDate:'利用日未入力')+' ／ 保存 '+localDate(rec.date)+' ／ '+rec.area+(rec.hotelName?' ／ ホテル '+rec.hotelName:'')+(rec.bookingTime?' ／ '+rec.bookingTime:'')+(rec.bookingName?' ／ '+rec.bookingName:'')+(rec.lineDestination?' ／ '+rec.lineDestination:'')));const right=node('div','',rec.complete?yen(rec.total):'要入力' );right.style.textAlign='right';head.append(left,right);const below=node('div','muted','合計 '+(rec.complete?yen(rec.total):'要入力' )+'　預かり '+(rec.received===null?'未入力':yen(rec.received))+'　おつり '+(rec.changeDue===null?'未計算':rec.changeDue<0?'不足 '+yen(-rec.changeDue):yen(rec.changeDue)));const btns=node('div','recActions');const detail=node('button','btn','内訳を表示'),view=node('button','btn','お客様表示'),remove=node('button','btn destructive','削除');const data=node('pre','small hidden');data.style.whiteSpace='pre-wrap';data.style.background='#faf8f3';data.style.padding='10px';data.style.borderRadius='8px';data.textContent=snapshotText(rec);detail.onclick=()=>{data.classList.toggle('hidden');detail.textContent=data.classList.contains('hidden')?'内訳を表示':'内訳を閉じる'};view.onclick=()=>openReceipt(rec);remove.onclick=()=>{if(!confirm('この会計記録を削除しますか？'))return;const next=records.filter(x=>x.id!==rec.id);const old=records;records=next;if(!saveRecords()){records=old;alert('保存領域に書き込めなかったため削除できませんでした。')}else if(window.kaikeiCloud?.removeRecord)window.kaikeiCloud.removeRecord(rec.id).catch(()=>{});renderRecords();renderDaily()};btns.append(detail,view,remove);card.append(head,below,btns,data);host.append(card)}renderLineSavedTargets()}
 
 function lineDestinationArea(text){
@@ -577,6 +577,7 @@ function renderLineSavedTargets(){
 function importLineBooking(append){
  const raw=$('linePaste').value.trim();
  if(!raw){$('lineImportStatus').textContent='お店のLINEを貼り付けてください。';return;}
+ if(append&&!Object.keys(lineDraft).length){$('lineImportStatus').textContent='先に「新しい予約として読み取る」で最初のLINEを入力してください。';return;}
  if(typeof window.parseKaikeiLine!=='function'){$('lineImportStatus').textContent='読み取り機能を読み込めませんでした。再読み込みしてください。';return;}
  const p=window.parseKaikeiLine(raw,{append,hotels:[...hotelEntries,...verifiedHotels]});
  if(!Object.keys(p).length){$('lineImportStatus').textContent='読み取れる内容がありませんでした。';return;}
@@ -609,8 +610,7 @@ function importLineBooking(append){
    lineDraft.destination=previous+' ／ '+p.destination;
   applyLineDestination(p.destination);
  }
- if(!p.store&&!append)lineDraft.store=store().name;
- $('lineImportStatus').textContent=(append?'LINEを追記しました。':'LINEを読み取りました。')+' 下の内容を確認し、最後に「会計完了・履歴に保存」を押してください。';
+ $('lineImportStatus').textContent=(append?'LINEを追記しました。':'LINEを読み取りました。')+(p.store||append?'':' 店舗が判別できなかったので手動で選択してください。')+' 下の内容を確認し、最後に「会計完了・履歴に保存」を押してください。';
  renderZones();renderAll();
  $('linePaste').value='';
 }
