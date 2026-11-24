@@ -1,7 +1,7 @@
 /* Local LINE reservation parser. No server calls or data uploads. */
 (function(){
  "use strict";
- const COURSE_MINUTES=new Set([50,60,70,80,90,100,110,120,130,160,190]);
+ const COURSE_MINUTES=new Set([50,60,70,80,90,100,110,120,130,140,160,170,190,200]);
  function clean(s){return String(s||"").normalize("NFKC").replace(/\u3000/g," ").trim()}
  function personName(raw){
   const s=clean(raw).replace(/^(?:名前|お名前)[:：\s]*/,"").replace(/(?:様|さん)$/,"").trim();
@@ -19,7 +19,7 @@
   else if(/もし亀|もしカメ|亀|かめ|カメ/.test(all))p.store="もし亀";
   else if(/アクア|aqua/i.test(all))p.store="アクア";
   // 「指名」だけなら初回予約（指名料0円）。2回目以降の「リピ」のときだけ有料。
-  if(/リピ(?:ート)?/.test(all)){p.nomination=true;p.visitType="リピート";}
+  if(/(?:リピ(?:ート)?|りぴ(?:ーと)?)/.test(all)){p.nomination=true;p.visitType="リピート";}
   else if(/指名/.test(all)){p.nomination=false;p.visitType="初回指名";}
   if(/(?:3\s*[PＰ]|3ピ|スリーピー)/i.test(all))p.three=true;
   const placePattern=/(?:愛知県|名古屋市|(?:千種|昭和|天白|名東|中村|中川|瑞穂|守山|熱田|中|東|西|北|南|緑|港)区|(?:一宮|稲沢|春日井|清須|北名古屋|長久手|尾張旭|小牧|岩倉|江南|犬山|あま)市|ホテル|ラブホ|マンション|アパート|自宅|住所|お届け先|行き先|号室|[0-9]{3,4}号|丁目|天白[0-9]|一宮ラブホ)/i;
@@ -34,13 +34,13 @@
     if(!p.time){const h=Number(time[1]);p.time=(h>=24?"翌":"")+String(h%24).padStart(2,"0")+":"+time[2];p.rawTime=v}
     used.add(i);continue;
    }
-   const combined=v.match(/^(50|60|70|80|90|100|110|120|130|160|190)[\-‐‑−–—ー](\d{4,6})(.*)$/);
-   if(combined){
+   const combined=v.match(/^(\d{2,3})[\-‐‑−–—ー](\d{4,6})(.*)$/);
+   if(combined&&Number(combined[1])>=30&&Number(combined[1])<=360&&Number(combined[1])%10===0&&Number(combined[2])>=3000&&Number(combined[2])<=200000){
     p.course=Number(combined[1]);p.advertisedPrice=Number(combined[2]);
     const name=personName(combined[3]);if(name)p.name=name;
     used.add(i);continue;
    }
-   if(/^\d{2,3}$/.test(v)&&COURSE_MINUTES.has(Number(v))){p.course=Number(v);used.add(i);continue}
+   if(/^\d{2,3}$/.test(v)&&(COURSE_MINUTES.has(Number(v))||(Number(v)>=30&&Number(v)<=360&&Number(v)%10===0))){p.course=Number(v);used.add(i);continue}
    const priceName=v.match(/^(\d{4,6})([^\d].*)?$/);
    if(priceName&&Number(priceName[1])>=3000&&Number(priceName[1])<=200000){
     if(!Number.isFinite(p.advertisedPrice))p.advertisedPrice=Number(priceName[1]);
@@ -49,7 +49,7 @@
    }
    const coded=v.match(/^([A-Za-z]{1,3}\d{3,8})([ぁ-ゔァ-ヶー一-龥・]{2,22})$/);
    if(coded){p.memberCode=coded[1];p.name=coded[2];used.add(i);continue}
-   if(/^(?:NEXUS|ネクサス|ネク|もし亀|もしカメ|亀|かめ|カメ|リセット|アクア)(?:新規)?(?:本)?(?:指名|リピ(?:ート)?|3P)?$/i.test(v)){used.add(i);continue}
+   if(/^(?:NEXUS|ネクサス|ネク|もし亀|もしカメ|亀|かめ|カメ|リセット|アクア)(?:新規)?(?:本)?(?:指名|リピ(?:ート)?|りぴ(?:ーと)?|3P)?$/i.test(v)){used.add(i);continue}
   }
   const destinations=[];
   for(const [i,line] of lines.entries()){
