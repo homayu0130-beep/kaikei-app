@@ -82,26 +82,33 @@ function appendAmountGroup(target,title,rows,total,isPrivate=false){
 }
 function compute(r){
  const rule=ruleFor(r.store),key=(r.mode==="3P"?"3P":"通常")+"|"+n(r.course);
+ const solo3P=r.mode==="3P"&&(r.store==="NEXUS"||r.store==="もし亀");
+ const soloKey="通常|"+n(r.course);
  const missing=[],breakdown=[];
  let sum=0;
  const add=(name,amount)=>{sum+=amount;breakdown.push({name,amount})};
  if(r.complete!==true)missing.push("会計未確定");
  if(r.store==="リセット"&&r.mode==="3P")missing.push("リセットは3P対象外");
- const courseBack=rule.courseBack[key];
+ // A 3P booking pays this therapist the same course back as a single-person booking.
+ // Always use the normal rate, including when the normal rate is customized later.
+ const courseBack=solo3P?rule.courseBack[soloKey]:rule.courseBack[key];
  const fee=n(r.base)+n(r.threeFee);
- // Moshikame 3P is paid as one worker: calculate the standard diary expense
- // on the corresponding single-person course price, not the 2-person sale.
- const moshikameSoloPrice={60:10000,80:13000,110:17000};
- const expenseCourseFee=r.store==="もし亀"&&r.mode==="3P"
-  ?(moshikameSoloPrice[n(r.course)]??fee):fee;
- if(!blank(courseBack))add("コースバック",n(courseBack));
- else if(!blank(rule.coursePct))add("コース歩合",Math.round(fee*n(rule.coursePct)/100));
+ const singleCoursePrices={
+  "NEXUS":{70:15000,100:20000,130:25000,160:30000},
+  "もし亀":{60:10000,80:13000,110:17000}
+ };
+ const expenseCourseFee=solo3P?(singleCoursePrices[r.store]?.[n(r.course)]??fee):fee;
+ // If two therapists each have nominations, only this therapist's 2000 yen is hers.
+ const nominationBack=solo3P?Math.min(2000,Math.max(0,n(r.nomination))):n(r.nomination);
+ if(!blank(courseBack))add("コースバック"+(solo3P?"（1人分と同額）":""),n(courseBack));
+ else if(!blank(rule.coursePct))add("コース歩合",Math.round(expenseCourseFee*n(rule.coursePct)/100));
  else missing.push("コースバック未設定");
  if(n(r.extMinutes)>0){
   if(blank(r.ext))missing.push("延長料金");
+  else if(solo3P)add("延長バック（1人分・30分4,000円）",Math.round(n(r.extMinutes)/30*4000));
   else add("延長バック50％",Math.round(n(r.ext)/2));
  }
- if(n(r.nomination))add("指名料（全額）",n(r.nomination));
+ if(nominationBack)add("指名料（本人分・全額）",nominationBack);
  if(n(r.optionsTotal)){
   if(r.store==="リセット"&&Array.isArray(r.options)&&r.options.length){
    let known=0,other=0;
@@ -128,7 +135,7 @@ function compute(r){
  }
  const diary=diaries[recordDay(r)];
  if(!Number.isInteger(diary)||diary<0)missing.push("日記投稿数");
- else add("雑費控除 "+(diary>=6?5:10)+"％"+(r.store==="もし亀"&&r.mode==="3P"?"（1人分コース＋指名料）":""),-Math.round(Math.max(0,expenseCourseFee+n(r.nomination))*(diary>=6?5:10)/100));
+ else add("雑費控除 "+(diary>=6?5:10)+"％"+(solo3P?"（1人分コース＋本人の指名料）":""),-Math.round(Math.max(0,expenseCourseFee+nominationBack)*(diary>=6?5:10)/100));
  return {amount:missing.length?null:Math.round(sum),known:Math.round(sum),missing,breakdown};
 }
 function scoped(){
@@ -225,8 +232,13 @@ function renderSettings(){
    const tr=document.createElement("tr");
    for(const value of [mode,min+"分"]){const td=document.createElement("td");td.textContent=value;tr.append(td)}
    const td=document.createElement("td");const inp=document.createElement("input");inp.type="number";inp.min="0";
-   inp.dataset.back=mode+"|"+min;const value=rule.courseBack[inp.dataset.back];
-   inp.value=blank(value)?"":String(value);inp.placeholder="未確認";td.append(inp);tr.append(td);body.append(tr);
+   inp.dataset.back=mode+"|"+min;
+   const shared3P=mode==="3P"&&(shop==="NEXUS"||shop==="もし亀");
+   const value=shared3P?rule.courseBack["通常|"+min]:rule.courseBack[inp.dataset.back];
+   inp.value=blank(value)?"":String(value);
+   inp.placeholder=shared3P?"通常と同じ":"未確認";
+   if(shared3P){inp.disabled=true;inp.title="3Pのバックは通常コースと同じ金額を自動適用します。"}
+   td.append(inp);tr.append(td);body.append(tr);
   }
  }table.append(body);h.append(table);
  const percentages=$("pctFields");percentages.replaceChildren();
@@ -242,6 +254,7 @@ async function saveSettings(){
  if(!user)return;
  const shop=$("ruleStore").value,courseBack={},patch={};
  for(const inp of $("courseBackFields").querySelectorAll("input[data-back]")){
+  if(inp.disabled)continue;
   if(inp.value.trim()!==""){const value=Number(inp.value);if(!Number.isFinite(value)||value<0){setStatus("settingsStatus","バック額を正しく入力してください。",true);return}courseBack[inp.dataset.back]=value}
   else courseBack[inp.dataset.back]=null;
  }
