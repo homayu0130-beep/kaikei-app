@@ -69,6 +69,7 @@ async function saveHotel(hotel) {
   try {
     await setDoc(hotelDoc(hotel.name),{
       name:hotel.name,travel:hotel.travel,
+      address:hotel.address||"",
       areaName:hotel.areaName||"",areaGroup:hotel.areaGroup||"",
       updatedAt:hotel.updatedAt||Date.now()
     });
