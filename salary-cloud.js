@@ -179,13 +179,13 @@ function render(){
   const name=document.createElement("strong");name.textContent=r.store+"｜"+r.course+"分 "+r.mode;
   const pay=document.createElement("span");pay.className="big";pay.textContent=p.amount===null?"要設定":Y(p.amount);
   line.append(name,pay);item.append(line);
-  const sub=document.createElement("div");sub.className="muted";sub.textContent="会計 "+Y(n(r.total))+"／"+(r.area||"");item.append(sub);
+  const sub=document.createElement("div");sub.className="muted";sub.textContent="会計 "+Y(n(r.total))+"／"+(r.area||"")+(r.hotelName?"／ホテル："+r.hotelName:"");item.append(sub);
   const split=splitAmounts(r);
   appendAmountGroup(item,"お店に渡す分",[
    ["コース料金",split.course],
    ["延長料金",split.extension],
    ["指名料",split.nomination],
-   ["交通費",split.travel]
+   [r.hotelName?"交通費（"+r.hotelName+"）":"交通費",split.travel]
   ],split.shop);
   appendAmountGroup(item,"自分で受け取るオプション代",
    split.options.map(o=>[o.name,o.amount]),split.optionsTotal,true);
