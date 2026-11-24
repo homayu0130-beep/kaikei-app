@@ -21,6 +21,7 @@ const DELETED_KEY = "tenpo_kaikei_cloud_deleted_ids_v1";
 const OWNER_UID_KEY = "tenpo_kaikei_cloud_owner_uid_v1";
 let currentUser = null;
 let unsubscribe = null;
+let hotelWatchUnsubscribe = null;
 let syncing = false;
 
 function status(message, error=false) {
@@ -49,6 +50,54 @@ function recordsCollection() {
 }
 function recordDoc(id) {
   return doc(db, "users", currentUser.uid, "accountingRecords", id);
+}
+function hotelKey(name) {
+  return String(name||"").normalize("NFKC").trim().replace(/\s+/g," ").toLowerCase();
+}
+function hotelCollection() {
+  return collection(db,"users",currentUser.uid,"hotelTravel");
+}
+function hotelDoc(name) {
+  return doc(db,"users",currentUser.uid,"hotelTravel",encodeURIComponent(hotelKey(name)));
+}
+function validHotel(h) {
+  return !!h && typeof h.name==="string" && h.name.trim().length>0 &&
+    typeof h.travel==="number" && Number.isFinite(h.travel) && h.travel>=0 && h.travel<=999999;
+}
+async function saveHotel(hotel) {
+  if (!currentUser || !validHotel(hotel)) return false;
+  try {
+    await setDoc(hotelDoc(hotel.name),{
+      name:hotel.name,travel:hotel.travel,
+      areaName:hotel.areaName||"",areaGroup:hotel.areaGroup||"",
+      updatedAt:hotel.updatedAt||Date.now()
+    });
+    return true;
+  } catch(e) {
+    status("ホテル交通費のクラウド保存に失敗しました。端末の登録は残っています。 "+friendlyError(e),true);
+    return false;
+  }
+}
+function startHotelSync(userId) {
+  if(hotelWatchUnsubscribe){hotelWatchUnsubscribe();hotelWatchUnsubscribe=null}
+  if(!currentUser || !bridge() || !window.kaikeiHotelBridge)return;
+  hotelWatchUnsubscribe=onSnapshot(hotelCollection(), snapshot=>{
+    if(!currentUser || currentUser.uid!==userId) return;
+    const remote=[];
+    const cloud=new Map();
+    snapshot.forEach(entry=>{
+      const h=entry.data();
+      if(validHotel(h)){remote.push(h);cloud.set(hotelKey(h.name),h)}
+    });
+    const hotelBridge=window.kaikeiHotelBridge;
+    hotelBridge.merge(remote);
+    for(const h of hotelBridge.get()){
+      const previous=cloud.get(hotelKey(h.name));
+      if(!previous || (h.updatedAt||0)>(previous.updatedAt||0)){
+        saveHotel(h).catch(()=>{});
+      }
+    }
+  },e=>status("ホテル交通費を同期できませんでした。 "+friendlyError(e),true));
 }
 function friendlyError(e) {
   const code = String(e && e.code || "");
@@ -155,6 +204,7 @@ async function synchronize() {
 window.kaikeiCloud = {
   saveRecord: upsertRecord,
   removeRecord: tombstoneRecord,
+  saveHotel,
   synchronize
 };
 if (loginButton) loginButton.addEventListener("click",async()=>{
@@ -173,6 +223,7 @@ if (logoutButton) logoutButton.addEventListener("click",()=>{
 if (syncButton) syncButton.addEventListener("click",synchronize);
 onAuthStateChanged(auth,async user=>{
   if (unsubscribe) {unsubscribe();unsubscribe=null;}
+  if (hotelWatchUnsubscribe) {hotelWatchUnsubscribe();hotelWatchUnsubscribe=null;}
   currentUser=null;
   if (!user) {
     setButtons(false);
@@ -189,5 +240,6 @@ onAuthStateChanged(auth,async user=>{
   currentUser=user;
   setButtons(true);
   status("Googleアカウントを確認しました。同期しています…");
+  startHotelSync(user.uid);
   await synchronize();
 },e=>status(friendlyError(e),true));
