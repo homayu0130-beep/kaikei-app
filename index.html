@@ -553,7 +553,7 @@ function renderLinePreview(c){
  add('コース',lineDraft.course?lineDraft.course+'分':'手動で確認');
  if(lineDraft.name)add('名前',lineDraft.name);
  if(lineDraft.memberCode)add('会員番号',lineDraft.memberCode);
- add('指名・リピ',lineDraft.nomination?'あり':'記載なし・手動確認');
+ add('指名・リピ',lineDraft.visitType==='初回指名'?'初回指名（料金なし）':lineDraft.visitType==='リピート'?'リピート（料金あり）':'記載なし・手動確認');
  if(lineDraft.destination)add('行き先',lineDraft.destination);
  if(Number.isFinite(lineDraft.advertisedPrice)){
   add('LINEの記載額',yen(lineDraft.advertisedPrice));
@@ -600,7 +600,7 @@ function importLineBooking(append){
   const index=store().courses.findIndex(c=>c.m===p.course&&(!three||si!==0||c.threeFee!==null));
   if(index>=0){ci=index;renderCourses();fillThree();}
  }
- if(p.nomination)$('nom').checked=true;
+ if(p.nomination!==undefined)$('nom').checked=Boolean(p.nomination);
  $('nomCountWrap').classList.toggle('hidden',!three||!$('nom').checked);
  $('aquaNomWrap').classList.toggle('hidden',si!==3||!$('nom').checked);
  const previous=lineDraft.destination||'';
