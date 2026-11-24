@@ -10,7 +10,7 @@ const pctMeta=[["optionsPct","オプション（基本）"],["changePct","チェ
 const fullReset=new Set(["ベビードール","パウダー","極液","マイクロビキニ"]);
 const defaultRules={
  "NEXUS":{courseBack:{"通常|70":7500,"通常|100":10000,"通常|130":12500,"通常|160":15000,"通常|190":17500},optionsPct:100,travelPct:0},
- "もし亀":{courseBack:{"通常|60":5000,"通常|80":7000,"通常|110":9000},optionsPct:100,travelPct:0},
+ "もし亀":{courseBack:{"通常|60":5000,"通常|80":7000,"通常|110":9000,"3P|60":5000,"3P|80":7000,"3P|110":9000},optionsPct:100,travelPct:0},
  "リセット":{courseBack:{"通常|60":5000,"通常|90":7000,"通常|120":10000},optionsPct:100,travelPct:0},
  "アクア":{courseBack:{"通常|60":5000,"通常|90":7000,"通常|120":10000},optionsPct:100,travelPct:0}
 };
@@ -89,6 +89,11 @@ function compute(r){
  if(r.store==="リセット"&&r.mode==="3P")missing.push("リセットは3P対象外");
  const courseBack=rule.courseBack[key];
  const fee=n(r.base)+n(r.threeFee);
+ // Moshikame 3P is paid as one worker: calculate the standard diary expense
+ // on the corresponding single-person course price, not the 2-person sale.
+ const moshikameSoloPrice={60:10000,80:13000,110:17000};
+ const expenseCourseFee=r.store==="もし亀"&&r.mode==="3P"
+  ?(moshikameSoloPrice[n(r.course)]??fee):fee;
  if(!blank(courseBack))add("コースバック",n(courseBack));
  else if(!blank(rule.coursePct))add("コース歩合",Math.round(fee*n(rule.coursePct)/100));
  else missing.push("コースバック未設定");
@@ -123,7 +128,7 @@ function compute(r){
  }
  const diary=diaries[recordDay(r)];
  if(!Number.isInteger(diary)||diary<0)missing.push("日記投稿数");
- else add("雑費控除 "+(diary>=6?5:10)+"％",-Math.round(Math.max(0,fee+n(r.nomination))*(diary>=6?5:10)/100));
+ else add("雑費控除 "+(diary>=6?5:10)+"％"+(r.store==="もし亀"&&r.mode==="3P"?"（1人分コース＋指名料）":""),-Math.round(Math.max(0,expenseCourseFee+n(r.nomination))*(diary>=6?5:10)/100));
  return {amount:missing.length?null:Math.round(sum),known:Math.round(sum),missing,breakdown};
 }
 function scoped(){
