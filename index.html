@@ -57,7 +57,7 @@
 <input class="input" id="hotelName" list="hotelSuggestions" placeholder="例：オリエンタルホテル、Gホテル" autocomplete="off" maxlength="100" />
 <datalist id="hotelSuggestions"></datalist>
 <div id="hotelQuickButtons" class="row2" style="margin-top:9px"></div>
-<p id="hotelFeedback" class="muted" role="status" aria-live="polite">初めてのホテルは地域を選ぶか交通費を入力し、交通費を登録してください。</p>
+<p id="hotelFeedback" class="muted" role="status" aria-live="polite">初めてのホテルは地域を選ぶか交通費を入力し、登録してください。同名のホテルがある場合は支店名や地域名も入れてください。</p>
 <label class="label" for="search">地名検索</label><input class="input" id="search" placeholder="例：清須、大治、中区" autocomplete="off" />
 <div id="zones" class="zones"></div>
 <div style="background:#faf6ef;border-radius:11px;padding:12px;margin-top:11px"><strong id="selectedArea">地域を選択してください</strong><div class="row2"><div><label class="label" for="travel">交通費（円）</label><input class="input" id="travel" type="number" min="0" inputmode="numeric" placeholder="未入力" /></div></div><div class="muted" id="travelNote" style="margin-top:7px"></div><button type="button" class="btn gold" id="saveHotel" style="margin-top:10px">このホテルの交通費を登録・更新</button></div>
@@ -206,7 +206,7 @@ const store=()=>stores[si],course=()=>store().courses[ci];
 function saveStores(){try{localStorage.setItem(STORE_KEY,JSON.stringify(stores));return true}catch(e){return false}}
 function saveRecords(){try{localStorage.setItem(REC_KEY,JSON.stringify(records));return true}catch(e){return false}}
 const hotelKey=name=>String(name||'').normalize('NFKC').trim().replace(/\s+/g,' ').toLowerCase();
-let hotelEntries=[];
+let hotelEntries=[],lastAutoHotelKey='';
 try{const saved=JSON.parse(localStorage.getItem(HOTEL_KEY)||'[]');if(Array.isArray(saved))hotelEntries=saved.filter(h=>h&&typeof h.name==='string'&&h.name.trim()&&typeof h.travel==='number'&&Number.isFinite(h.travel)&&h.travel>=0&&h.travel<=999999).slice(-300)}catch(e){}
 function saveHotelEntries(){try{localStorage.setItem(HOTEL_KEY,JSON.stringify(hotelEntries));return true}catch(e){return false}}
 function lookupHotel(name){return hotelEntries.find(h=>hotelKey(h.name)===hotelKey(name))}
@@ -221,11 +221,18 @@ function renderHotelChoices(){
 function useHotel(name){
  const hotel=lookupHotel(name);
  if(hotel){
+  lastAutoHotelKey=hotelKey(name);
   $('travel').value=String(hotel.travel);
   area=hotel.areaName?{name:hotel.areaName,fee:hotel.travel,group:hotel.areaGroup||'',direct:true}:null;
   $('hotelFeedback').textContent='登録済み：'+hotel.name+'／交通費 '+yen(hotel.travel)+(hotel.areaName?'／'+hotel.areaName:'');
   renderZones();renderAll();
   return true;
+ }
+ if(lastAutoHotelKey && hotelKey(name)!==lastAutoHotelKey){
+  lastAutoHotelKey='';
+  $('travel').value='';
+  area=null;
+  renderZones();renderAll();
  }
  $('hotelFeedback').textContent=$('hotelName').value.trim()?'未登録のホテルです。地域・交通費を入力したら「登録・更新」を押してください。':'ホテル名を入力すると登録済みの交通費を探せます。';
  return false;
@@ -238,7 +245,7 @@ function rememberHotel(showMessage=true){
   return false;
  }
  const item={name,travel:Number(field),areaName:area?.name||'',areaGroup:area?.group||'',updatedAt:Date.now()};
- const key=hotelKey(name),old=hotelEntries.findIndex(h=>hotelKey(h.name)===key);
+ const key=hotelKey(name),old=hotelEntries.findIndex(h=>hotelKey(h.name)===key);lastAutoHotelKey=key;
  if(old>=0)hotelEntries[old]=item;else hotelEntries.push(item);
  hotelEntries=hotelEntries.slice(-300);
  if(!saveHotelEntries()){if(showMessage)$('hotelFeedback').textContent='ホテルの保存に失敗しました。';return false}
@@ -270,7 +277,7 @@ function node(tag,cls,text){const el=document.createElement(tag);if(cls)el.class
 function row(label,value){const r=node('div','line');r.append(node('span','',label),node('strong','',value));return r}
 function renderStores(){const el=$('store');el.replaceChildren();stores.forEach((s,i)=>el.add(new Option(s.name,String(i))));for(let i=stores.length+1;i<=5;i++){let op=new Option('店舗'+i+'（未登録）');op.disabled=true;el.add(op)}el.value=String(si)}
 function renderCourses(){const container=$('courses');container.replaceChildren();store().courses.forEach((c,i)=>{if(three&&si===0&&c.threeFee===null)return;const b=node('button','course');b.type='button';b.setAttribute('aria-pressed',String(ci===i));b.append(node('strong','',c.m+'分'),node('span','',three&&si===3?yen(c.p*2):three?(c.threeFee===null?'3P料金未登録':yen(c.threeFee)):yen(c.p)));if(si===1)b.append(node('span','','元'+(c.m-10)+'分'));b.onclick=()=>{ci=i;renderCourses();fillThree();renderAll()};container.append(b)})}
-function renderZones(){const q=$('search').value.trim(),host=$('zones');host.replaceChildren();let count=0;for(const group of zoneGroups){const list=group.names.filter(s=>s.includes(q));if(!list.length)continue;count+=list.length;const z=node('section','zone '+group.css),head=node('div','zoneHead'),gr=node('div','places');head.append(node('strong','',group.title),node('span','',list.length+'地域'));for(const name of list){const b=node('button','place');b.type='button';b.setAttribute('aria-pressed',String(area?.name===name));b.append(node('b','',name),node('small','',group.fee===null?'要確認':yen(group.fee)+'〜'));b.onclick=()=>{area={name,fee:group.fee,direct:group.direct.includes(name),group:group.title};$('travel').value=group.fee===null?'':group.fee;renderZones();renderAll()};gr.append(b)}z.append(head,gr);host.append(z)}if(!count)host.append(node('p','muted','一致する地名はありません。交通費を直接入力できます。'))}
+function renderZones(){const q=$('search').value.trim(),host=$('zones');host.replaceChildren();let count=0;for(const group of zoneGroups){const list=group.names.filter(s=>s.includes(q));if(!list.length)continue;count+=list.length;const z=node('section','zone '+group.css),head=node('div','zoneHead'),gr=node('div','places');head.append(node('strong','',group.title),node('span','',list.length+'地域'));for(const name of list){const b=node('button','place');b.type='button';b.setAttribute('aria-pressed',String(area?.name===name));b.append(node('b','',name),node('small','',group.fee===null?'要確認':yen(group.fee)+'〜'));b.onclick=()=>{area={name,fee:group.fee,direct:group.direct.includes(name),group:group.title};$('travel').value=group.fee===null?'':group.fee;lastAutoHotelKey='';renderZones();renderAll()};gr.append(b)}z.append(head,gr);host.append(z)}if(!count)host.append(node('p','muted','一致する地名はありません。交通費を直接入力できます。'))}
 function fillThree(){
  $('threeMode').value=store().threeMode;
  $('threeMode').disabled=true;
@@ -322,7 +329,7 @@ function missingAction(c){
 }
 function mainMissingLabel(c){const list=missingAction(c);return list.length?list[0]+(list.length>1?'（ほか'+(list.length-1)+'項目）':''):'料金を確認してください';}
 function renderAll(){const c=getCalc();$('selectedArea').textContent=area?'お届け先：'+area.name+'（'+area.group+'）':'お届け先：地域未選択（交通費の手入力も可能）';$('travelNote').textContent=!area?'':area.fee===null?'交通費を入力してください':area.direct?'交通費は最低額です':'交通費（地図の色から推定・要確認）';$('extAmount').textContent=c.ext===null?'未設定・要確認':yen(c.ext);$('calculated').textContent=c.complete?yen(c.total):mainMissingLabel(c);$('miniTotal').textContent=c.complete?yen(c.total):'入力が必要';$('calculated').style.fontSize=c.complete?'':'18px';$('completeNote').textContent=c.complete?'':missingAction(c).join('／');
-const details=$('lines');details.replaceChildren();details.append(row((three?(si===3?'Wセラピスト ':'3P '):'')+'コース '+c.course+'分',three&&c.threeMode==='total'?'3P専用料金に含む':yen(c.base)));if(three&&si!==3)details.append(row(c.threeMode==='total'?'3P専用料金':'3P追加料金',c.threeFee===null?'未設定':yen(c.threeFee)));details.append(row('交通費',c.travel===null?'未設定':yen(c.travel)),row(si===0?'本指名':'指名料',yen(c.nomination)));if(si===1)details.append(row('チェンジ',yen(c.change)));details.append(row('延長 '+c.extMinutes+'分'+(three&&c.extMinutes>0?(c.threeDouble?'（2人分）':'（1人分）'):''),c.ext===null?'未設定':yen(c.ext)));for(const o of c.options)details.append(row(o.name+' × '+o.qty,yen(o.total)));if(c.surcharge)details.append(row('その他追加料金',yen(c.surcharge)));if(c.discount)details.append(row('値引き','−'+yen(c.discount)));
+const details=$('lines');details.replaceChildren();details.append(row((three?(si===3?'Wセラピスト ':'3P '):'')+'コース '+c.course+'分',three&&c.threeMode==='total'?'3P専用料金に含む':yen(c.base)));if(three&&si!==3)details.append(row(c.threeMode==='total'?'3P専用料金':'3P追加料金',c.threeFee===null?'未設定':yen(c.threeFee)));details.append(row(c.hotelName?'交通費（'+c.hotelName+'）':'交通費',c.travel===null?'未設定':yen(c.travel)),row(si===0?'本指名':'指名料',yen(c.nomination)));if(si===1)details.append(row('チェンジ',yen(c.change)));details.append(row('延長 '+c.extMinutes+'分'+(three&&c.extMinutes>0?(c.threeDouble?'（2人分）':'（1人分）'):''),c.ext===null?'未設定':yen(c.ext)));for(const o of c.options)details.append(row(o.name+' × '+o.qty,yen(o.total)));if(c.surcharge)details.append(row('その他追加料金',yen(c.surcharge)));if(c.discount)details.append(row('値引き','−'+yen(c.discount)));
 const status=$('feeStatus');status.className='status';
 if(!c.complete){status.classList.add('warn');status.textContent='次の項目を入力してください：'+missingAction(c).join('／')+'。入力後に合計金額とおつりが表示されます。'}
 else{status.classList.add('good');status.textContent='コース・交通費・指名・延長・オプションを合算したお会計金額です。'}
@@ -347,7 +354,7 @@ function openReceipt(c){customerSnapshot=structuredClone(c);renderReceipt(custom
 function closeReceipt(){$('customerOverlay').classList.add('hidden');document.body.style.overflow='';customerSnapshot=null}
 function exportFile(filename,content,type){const blob=new Blob([content],{type});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=filename;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500)}
 function csvCell(s){return '"'+String(s??'').replace(/"/g,'""')+'"'}
-function csv(){const keys=['date','serviceDate','store','mode','course','area','base','threeFee','travel','nomination','change','extMinutes','ext','options','optionsTotal','discount','surcharge','total','received','changeDue','complete','memo'];const names=['保存日時','利用日','店舗','形態','コース(分)','地域','コース料金','3P料金','交通費','指名料','チェンジ','延長(分)','延長料金','オプション内訳','オプション合計','値引き','その他追加','お会計合計','預かり金','おつり(マイナスは不足)','料金確定','メモ'];const rows=[names];for(const r of records){const obj={...r,date:localDate(r.date),options:(r.options||[]).map(o=>o.name+'×'+o.qty+':'+o.total).join(' / ')};rows.push(keys.map(k=>obj[k]??''))}exportFile('会計履歴_'+new Date().toISOString().slice(0,10)+'.csv','\uFEFF'+rows.map(row=>row.map(csvCell).join(',')).join('\r\n'),'text/csv;charset=utf-8')}
+function csv(){const keys=['date','serviceDate','store','mode','course','area','hotelName','base','threeFee','travel','nomination','change','extMinutes','ext','options','optionsTotal','discount','surcharge','total','received','changeDue','complete','memo'];const names=['保存日時','利用日','店舗','形態','コース(分)','地域','ホテル名','コース料金','3P料金','交通費','指名料','チェンジ','延長(分)','延長料金','オプション内訳','オプション合計','値引き','その他追加','お会計合計','預かり金','おつり(マイナスは不足)','料金確定','メモ'];const rows=[names];for(const r of records){const obj={...r,date:localDate(r.date),options:(r.options||[]).map(o=>o.name+'×'+o.qty+':'+o.total).join(' / ')};rows.push(keys.map(k=>obj[k]??''))}exportFile('会計履歴_'+new Date().toISOString().slice(0,10)+'.csv','\uFEFF'+rows.map(row=>row.map(csvCell).join(',')).join('\r\n'),'text/csv;charset=utf-8')}
 
 // お店の日別売上：コース・指名/リピート・延長・交通費を集計する。
 function tokyoDay(value){
@@ -435,7 +442,7 @@ $('normalBtn').onclick=()=>{three=false;renderMode()};$('threeBtn').onclick=()=>
 $('threeMode').onchange=()=>{store().threeMode=$('threeMode').value;$('threeFeeTitle').textContent=store().threeMode==='total'?'3P専用コース総額（円）':'3P追加料金（円）';renderAll()};
 $('threeFee').oninput=()=>{course().threeFee=blank('threeFee')?null:money($('threeFee').value);renderCourses();renderAll()};$('threeExt').oninput=()=>{store().threeExt=blank('threeExt')?null:money($('threeExt').value);renderAll()};
 $('saveThree').onclick=()=>{if(blank('threeFee')){alert('3Pの料金を入力してください。');return}alert(saveStores()?'この端末に3P料金を保存しました。':'この環境では料金設定を保存できませんでした。')};
-$('nom').onchange=()=>{$('nomCountWrap').classList.toggle('hidden',!three||!$('nom').checked);$('aquaNomWrap').classList.toggle('hidden',si!==3||!$('nom').checked);renderAll()};$('aquaNomFee').addEventListener('input',renderAll);$('change').onchange=()=>{$('changeCountWrap').classList.toggle('hidden',!three||!$('change').checked);renderCourses();renderAll()};
+$('nom').onchange=()=>{$('nomCountWrap').classList.toggle('hidden',!three||!$('nom').checked);$('aquaNomWrap').classList.toggle('hidden',si!==3||!$('nom').checked);renderAll()};$('aquaNomFee').addEventListener('input',renderAll);$('travel').addEventListener('input',()=>{lastAutoHotelKey=''});$('change').onchange=()=>{$('changeCountWrap').classList.toggle('hidden',!three||!$('change').checked);renderCourses();renderAll()};
 for(const id of ['travel','extMins','discount','surcharge','nomCount','changeCount','received','serviceDate','memo']){ $(id).addEventListener('input',renderAll);$(id).addEventListener('change',renderAll) }
 document.querySelectorAll('[data-min]').forEach(b=>b.onclick=()=>{$('extMins').value=b.dataset.min;renderAll()});
 $('addOption').onclick=()=>{
