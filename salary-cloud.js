@@ -10,7 +10,7 @@ const pctMeta=[["optionsPct","オプション（基本）"],["changePct","チェ
 const fullReset=new Set(["ベビードール","パウダー","極液","マイクロビキニ"]);
 const defaultRules={
  "NEXUS":{courseBack:{"通常|70":7500,"通常|100":10000,"通常|130":12500,"通常|160":15000,"通常|190":17500},optionsPct:100,travelPct:0},
- "もし亀":{courseBack:{},optionsPct:100,travelPct:0},
+ "もし亀":{courseBack:{"通常|60":5000,"通常|80":7000,"通常|110":9000},optionsPct:100,travelPct:0},
  "リセット":{courseBack:{"通常|60":5000,"通常|90":7000,"通常|120":10000},optionsPct:100,travelPct:0},
  "アクア":{courseBack:{"通常|60":5000,"通常|90":7000,"通常|120":10000},optionsPct:100,travelPct:0}
 };
@@ -41,7 +41,13 @@ function authError(e){
 }
 const ruleFor=name=>{
  const def=defaultRules[name]||{courseBack:{}},own=overrides[name]||{};
- return {...def,...own,courseBack:{...def.courseBack,...(own.courseBack||{})}};
+ const courseBack={...def.courseBack,...(own.courseBack||{})};
+ // Old blanks were saved before the confirmed Moshikame rates existed.
+ // Explicitly entered numeric amounts still take precedence.
+ if(name==="もし亀")for(const [key,value] of Object.entries(def.courseBack)){
+   if(blank(courseBack[key]))courseBack[key]=value;
+ }
+ return {...def,...own,courseBack};
 };
 // Course + extension + nomination + travel are the shop-side total.
 // Options are collected separately and must not be added to this figure.
