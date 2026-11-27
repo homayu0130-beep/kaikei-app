@@ -138,6 +138,13 @@ function compute(r){
  else add("雑費控除 "+(diary>=6?5:10)+"％"+(solo3P?"（1人分コース＋本人の指名料）":""),-Math.round(Math.max(0,expenseCourseFee+nominationBack)*(diary>=6?5:10)/100));
  return {amount:missing.length?null:Math.round(sum),known:Math.round(sum),missing,breakdown};
 }
+function optionBackInPay(result){
+ // 給料に加算されたオプションバックだけを抜き出す（店舗別の率やフルバック設定を尊重）。
+ return result.breakdown.reduce((total,part)=>/オプション/.test(part.name)?total+part.amount:total,0);
+}
+function payWithoutOptions(result){
+ return result.amount===null?null:result.amount-optionBackInPay(result);
+}
 function scoped(){
  const month=$("month").value,store=$("storeFilter").value;
  return records.filter(r=>recordDay(r).startsWith(month)&&(store==="all"||r.store===store));
@@ -163,41 +170,67 @@ function render(){
  const sorted=[...groups].sort(([a],[b])=>b.localeCompare(a));
  if(!groups.has(selectedDay))selectedDay=sorted[0][0];
  for(const [day,entries] of sorted){
-  const total=entries.reduce((v,x)=>v+(x.p.amount||0),0);
+  const total=entries.reduce((v,x)=>v+(x.p.amount??0),0);
+  const noOptions=entries.reduce((v,x)=>v+(payWithoutOptions(x.p)??0),0);
   const need=entries.filter(x=>x.p.amount===null).length;
-  const b=document.createElement("button");
-  b.type="button";b.className="day";b.setAttribute("aria-pressed",String(day===selectedDay));
-  const top=document.createElement("div");top.className="flex";
-  const label=document.createElement("strong");label.textContent=day;
-  const count=document.createElement("span");count.className="pill";count.textContent=entries.length+"件";
-  top.append(label,count);
-  const value=document.createElement("div");value.className="big";value.textContent="給料 "+Y(total)+(need?" ＋ 要設定"+need+"件":"");
   const shopTotal=entries.reduce((sum,x)=>sum+splitAmounts(x.r).shop,0);
   const optionTotal=entries.reduce((sum,x)=>sum+splitAmounts(x.r).optionsTotal,0);
-  const split=document.createElement("div");split.className="muted dayMetric";
-  split.textContent="お店分 "+Y(shopTotal)+" ／ オプション "+Y(optionTotal);
-  const detail=document.createElement("div");detail.className="muted";detail.textContent=Number.isInteger(diaries[day])?"日記"+diaries[day]+"件":"日記未入力";
-  b.append(top,value,split,detail);
-  b.addEventListener("click",()=>{selectedDay=day;render()});
-  host.append(b);
+  const btn=document.createElement("button");btn.type="button";
+  btn.className="day";btn.setAttribute("aria-pressed",String(day===selectedDay));
+  const top=document.createElement("div");top.className="dayTop";
+  const dateLabel=document.createElement("strong");dateLabel.className="dayDate";dateLabel.textContent=day;
+  const count=document.createElement("span");count.className="pill";count.textContent=entries.length+"件";
+  const arrow=document.createElement("span");arrow.className="dayArrow";arrow.textContent="›";arrow.setAttribute("aria-hidden","true");
+  top.append(dateLabel,count,arrow);btn.append(top);
+  const stats=document.createElement("div");stats.className="dayStats";
+  const line=(label,amount)=>{
+   const r=document.createElement("div");r.className="statLine";
+   const l=document.createElement("span");l.className="statLabel";l.textContent=label;
+   const a=document.createElement("strong");a.textContent=amount;
+   r.append(l,a);stats.append(r);
+  };
+  line("給料",Y(total)+(need?"（要設定"+need+"件）":""));
+  line("雑費控除後・オプション除く",Y(noOptions)+(need?" ＋未確定":""));
+  const other=document.createElement("div");other.className="muted";
+  other.textContent="お店分 "+Y(shopTotal)+" ／ オプション "+Y(optionTotal);
+  const diary=document.createElement("div");diary.className="muted";
+  diary.textContent=Number.isInteger(diaries[day])?"日記"+diaries[day]+"件":"日記未入力";
+  stats.append(other,diary);btn.append(stats);
+  btn.onclick=()=>{selectedDay=day;render()};
+  host.append(btn);
  }
- $("dayTitle").textContent=selectedDay+" の給料";
+ $("dayTitle").textContent=selectedDay+" の詳細";
  const detailHost=$("dayDetails");detailHost.replaceChildren();
  const entries=groups.get(selectedDay)||[];
+ const dayTotal=entries.reduce((sum,x)=>sum+(x.p.amount??0),0);
+ const dayNoOptions=entries.reduce((sum,x)=>sum+(payWithoutOptions(x.p)??0),0);
+ const dayBackOptions=entries.reduce((sum,x)=>sum+optionBackInPay(x.p),0);
  const dayShop=entries.reduce((sum,x)=>sum+splitAmounts(x.r).shop,0);
  const dayOptions=entries.reduce((sum,x)=>sum+splitAmounts(x.r).optionsTotal,0);
- const dayBox=document.createElement("div");dayBox.className="dayGroupSummary";
- const dayTitle=document.createElement("strong");dayTitle.textContent="この日の集計";dayBox.append(dayTitle);
- appendMoneyRow(dayBox,"お店分（コース＋延長＋指名＋交通費）",dayShop,true);
- appendMoneyRow(dayBox,"自分で受け取るオプション",dayOptions,true);
- detailHost.append(dayBox);
+ const hasPending=entries.some(x=>x.p.amount===null);
+ const summary=document.createElement("div");summary.className="c3Summary";
+ appendMoneyRow(summary,"今まで通りの給料合計"+(hasPending?"（計算済みのみ）":""),dayTotal,true);
+ appendMoneyRow(summary,"雑費控除後の給料（オプション除く）"+(hasPending?" ※":""),
+  dayNoOptions,true);
+ appendMoneyRow(summary,"給料に含まれるオプションバック",dayBackOptions,true);
+ detailHost.append(summary);
+ const hint=document.createElement("p");hint.className="noteFine";
+ hint.textContent="※ 給料は保存済みのバック率・日記投稿数で計算。オプションを除く給料＝今までの給料−給料に含まれるオプションバック。お店に渡す分とは別です。";
+ detailHost.append(hint);
+ const moneySummary=document.createElement("div");moneySummary.className="dayGroupSummary";
+ const moneyTitle=document.createElement("strong");moneyTitle.textContent="この日のお金の受け渡し";moneySummary.append(moneyTitle);
+ appendMoneyRow(moneySummary,"お店に渡す分（コース＋延長＋指名＋交通費）",dayShop,true);
+ appendMoneyRow(moneySummary,"自分で受け取るオプション代（お客様の支払額）",dayOptions,true);
+ detailHost.append(moneySummary);
  for(const {r,p} of entries){
   const item=document.createElement("div");item.className="item";
   const line=document.createElement("div");line.className="flex";
   const name=document.createElement("strong");name.textContent=r.store+"｜"+r.course+"分 "+r.mode;
   const pay=document.createElement("span");pay.className="big";pay.textContent=p.amount===null?"要設定":Y(p.amount);
   line.append(name,pay);item.append(line);
-  const sub=document.createElement("div");sub.className="muted";sub.textContent="会計 "+Y(n(r.total))+"／"+(r.area||"")+(r.hotelName?"／ホテル："+r.hotelName:"");item.append(sub);
+  const sub=document.createElement("div");sub.className="muted";
+  sub.textContent="会計 "+Y(n(r.total))+"／"+(r.area||"")+(r.hotelName?"／ホテル："+r.hotelName:"");
+  item.append(sub);
   const split=splitAmounts(r);
   appendAmountGroup(item,"お店に渡す分",[
    ["コース料金",split.course],
@@ -208,16 +241,24 @@ function render(){
   appendAmountGroup(item,"自分で受け取るオプション代",
    split.options.map(o=>[o.name,o.amount]),split.optionsTotal,true);
   if(p.missing.length){
-   const warning=document.createElement("div");warning.className="warn";warning.textContent="要確認："+p.missing.join("・");item.append(warning);
+   const warning=document.createElement("div");warning.className="warn";
+   warning.textContent="要確認："+p.missing.join("・");item.append(warning);
   }
-  const calculationTitle=document.createElement("h3");calculationTitle.textContent="給料計算の内訳（オプション代も含む）";item.append(calculationTitle);
+  const calculationTitle=document.createElement("h3");calculationTitle.className="salaryDetailTitle";
+  calculationTitle.textContent="給料計算の内訳（今まで通り）";item.append(calculationTitle);
+  const breakdownBox=document.createElement("div");breakdownBox.className="salaryBreakdown";
   for(const section of p.breakdown){
-   const row=document.createElement("div");row.className="flex muted";
+   const row=document.createElement("div");row.className="flex";
    const title=document.createElement("span");title.textContent=section.name;
    const amount=document.createElement("span");amount.textContent=(section.amount<0?"−":"")+Y(Math.abs(section.amount));
-   row.append(title,amount);item.append(row);
+   row.append(title,amount);breakdownBox.append(row);
   }
-  detailHost.append(item);
+  const without=payWithoutOptions(p);
+  const lower=document.createElement("div");lower.className="flex payWithoutOptions";
+  const label=document.createElement("span");label.textContent="雑費控除後（オプション除く）の給料";
+  const val=document.createElement("strong");val.textContent=without===null?"要設定":Y(without);
+  lower.append(label,val);breakdownBox.append(lower);
+  item.append(breakdownBox);detailHost.append(item);
  }
  $("diaryBox").classList.remove("hidden");
  $("diaryCount").value=Number.isInteger(diaries[selectedDay])?String(diaries[selectedDay]):"";
