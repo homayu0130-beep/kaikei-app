@@ -192,7 +192,7 @@ function render(){
   line("給料",Y(total)+(need?"（要設定"+need+"件）":""));
   line("雑費控除後・オプション除く",Y(noOptions)+(need?" ＋未確定":""));
   const other=document.createElement("div");other.className="muted";
-  other.textContent="お店分 "+Y(shopTotal)+" ／ オプション "+Y(optionTotal);
+  other.textContent="この日のお店に渡す合計 "+Y(shopTotal)+" ／ オプション "+Y(optionTotal);
   const diary=document.createElement("div");diary.className="muted";
   diary.textContent=Number.isInteger(diaries[day])?"日記"+diaries[day]+"件":"日記未入力";
   stats.append(other,diary);btn.append(stats);
@@ -221,12 +221,18 @@ function render(){
   dayNoOptions,true);
  appendMoneyRow(summary,"給料に含まれるオプションバック",dayBackOptions,true);
  detailHost.append(summary);
+ const shopDailyCard=document.createElement("div");shopDailyCard.className="shopDailyTotal";
+ const shopDailyLabel=document.createElement("div");shopDailyLabel.className="shopDailyLabel";shopDailyLabel.textContent="この日のお店に渡す合計（"+entries.length+"件分）";
+ const shopDailyValue=document.createElement("strong");shopDailyValue.textContent=Y(dayShop);
+ const shopDailyNote=document.createElement("p");shopDailyNote.className="noteFine";
+ shopDailyNote.textContent="コース料金＋延長料金＋指名料＋交通費。下にある各予約の「お店に渡す分」をすべて合計しています。オプション代は含みません。";
+ shopDailyCard.append(shopDailyLabel,shopDailyValue,shopDailyNote);detailHost.append(shopDailyCard);
  const hint=document.createElement("p");hint.className="noteFine";
  hint.textContent="※ 給料は保存済みのバック率・日記投稿数で計算。オプションを除く給料＝今までの給料−給料に含まれるオプションバック。お店に渡す分とは別です。";
  detailHost.append(hint);
  const moneySummary=document.createElement("div");moneySummary.className="dayGroupSummary";
  const moneyTitle=document.createElement("strong");moneyTitle.textContent="この日のお金の受け渡し";moneySummary.append(moneyTitle);
- appendMoneyRow(moneySummary,"お店に渡す分（コース＋延長＋指名＋交通費）",dayShop,true);
+ appendMoneyRow(moneySummary,"お店に渡す分・この日合計（"+entries.length+"件）",dayShop,true);
  appendMoneyRow(moneySummary,"自分で受け取るオプション代（お客様の支払額）",dayOptions,true);
  detailHost.append(moneySummary);
  for(const {r,p} of entries){
@@ -239,7 +245,7 @@ function render(){
   sub.textContent="会計 "+Y(n(r.total))+"／"+(r.area||"")+(r.hotelName?"／ホテル："+r.hotelName:"");
   item.append(sub);
   const split=splitAmounts(r);
-  appendAmountGroup(item,"お店に渡す分",[
+  appendAmountGroup(item,"この予約のお店に渡す分",[
    ["コース料金",split.course],
    ["延長料金",split.extension],
    ["指名料",split.nomination],
