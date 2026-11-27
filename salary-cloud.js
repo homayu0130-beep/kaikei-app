@@ -257,21 +257,7 @@ function render(){
    const warning=document.createElement("div");warning.className="warn";
    warning.textContent="要確認："+p.missing.join("・");item.append(warning);
   }
-  const calculationTitle=document.createElement("h3");calculationTitle.className="salaryDetailTitle";
-  calculationTitle.textContent="給料計算の内訳（今まで通り）";item.append(calculationTitle);
-  const breakdownBox=document.createElement("div");breakdownBox.className="salaryBreakdown";
-  for(const section of p.breakdown){
-   const row=document.createElement("div");row.className="flex";
-   const title=document.createElement("span");title.textContent=section.name;
-   const amount=document.createElement("span");amount.textContent=(section.amount<0?"−":"")+Y(Math.abs(section.amount));
-   row.append(title,amount);breakdownBox.append(row);
-  }
-  const without=payWithoutOptions(p);
-  const lower=document.createElement("div");lower.className="flex payWithoutOptions";
-  const label=document.createElement("span");label.textContent="雑費控除後（オプション除く）の給料";
-  const val=document.createElement("strong");val.textContent=without===null?"要設定":Y(without);
-  lower.append(label,val);breakdownBox.append(lower);
-  item.append(breakdownBox);detailHost.append(item);
+  detailHost.append(item);
  }
  $("diaryBox").classList.remove("hidden");
  $("diaryCount").value=Number.isInteger(diaries[selectedDay])?String(diaries[selectedDay]):"";
