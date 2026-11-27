@@ -370,7 +370,7 @@ function attach(){
  unsubs.push(onSnapshot(collection(db,"users",uid,"salaryDiary"),s=>{
   if(user?.uid!==uid)return;
   diaries=Object.fromEntries(s.docs.map(d=>[d.id,Number(d.data().count)]).filter(([day,count])=>/^\d{4}-\d\d-\d\d$/.test(day)&&Number.isInteger(count)&&count>=0));
-  dayChecks=Object.fromEntries(s.docs.map(d=>[d.id,d.data().checkedSignature]).filter(([day,v])=>/^\\d{4}-\\d\\d-\\d\\d$/.test(day)&&typeof v==="string"&&v));
+  dayChecks=Object.fromEntries(s.docs.map(d=>[d.id,d.data().checkedSignature]).filter(([day,v])=>/^\d{4}-\d\d-\d\d$/.test(day)&&typeof v==="string"&&v));
   ready.diaries=true;updateStatus();render();
  },onFailure));
  unsubs.push(onSnapshot(doc(db,"users",uid,"salarySettings","main"),s=>{
