@@ -196,7 +196,14 @@ function render(){
   const diary=document.createElement("div");diary.className="muted";
   diary.textContent=Number.isInteger(diaries[day])?"日記"+diaries[day]+"件":"日記未入力";
   stats.append(other,diary);btn.append(stats);
-  btn.onclick=()=>{selectedDay=day;render()};
+  btn.onclick=()=>{
+   selectedDay=day;render();
+   // Jump directly from the selected date card to its refreshed details.
+   const heading=$("dayTitle");
+   heading.setAttribute("tabindex","-1");
+   heading.focus({preventScroll:true});
+   heading.scrollIntoView({behavior:window.matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth",block:"start"});
+  };
   host.append(btn);
  }
  $("dayTitle").textContent=selectedDay+" の詳細";
