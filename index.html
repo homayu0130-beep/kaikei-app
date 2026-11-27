@@ -9,6 +9,12 @@
 <style>
 :root{--bg:#f6f3ed;--paper:#fff;--ink:#30291f;--sub:#746a5d;--line:#e4ddd2;--brown:#493a2a;--gold:#a57a35;--soft:#f5ede0;--green:#21633e;--red:#a23630;--amber:#7c5822}
 *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Noto Sans JP",Meiryo,sans-serif;font-size:14px;line-height:1.55;color:var(--ink)}button,input,select,textarea{font:inherit}button{cursor:pointer;touch-action:manipulation}button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--gold);outline-offset:2px}button:disabled{opacity:.4;cursor:not-allowed}.wrap{max-width:820px;margin:auto;padding:0 12px 110px}.hero{background:linear-gradient(120deg,#423123,#8f7248);color:#fff;padding:24px max(16px,env(safe-area-inset-left)) 22px;margin:0 -12px 14px}.hero small{letter-spacing:.16em;color:#eddbb8;font-size:10px;font-weight:700}.hero h1{font-size:25px;line-height:1.25;margin:6px 0}.hero p{color:#f8e9ce;font-size:12px;margin:0}.card{border:1px solid var(--line);background:var(--paper);border-radius:15px;padding:16px;margin:12px 0;box-shadow:0 2px 10px #58432b0b}.sectionTitle{display:flex;align-items:center;gap:9px;margin:0 0 13px;font-weight:800;font-size:16px}.sectionTitle b{width:25px;height:25px;display:grid;place-items:center;background:#eee0c1;color:#604826;border-radius:7px;font-size:13px}.label{display:block;margin:9px 0 5px;color:var(--sub);font-size:12px;font-weight:650}.input{width:100%;min-width:0;padding:11px 10px;border:1px solid #d7ccbc;border-radius:9px;background:#fff;color:var(--ink)}.row2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.row3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.row4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}.btn{border:1px solid #c9bda9;border-radius:9px;background:#fff;color:#4b3822;padding:10px 9px;font-weight:700;font-size:13px}.btn.primary{background:var(--brown);border-color:var(--brown);color:#fff}.btn.gold{background:#f2e6cd;border-color:#d6b77c}.btn.destructive{color:var(--red);border-color:#e4c5bd}.muted{color:var(--sub);font-size:12px}.small{font-size:12px}.hint{background:#fcf5e9;border:1px solid #eee0c4;color:#795e34;border-radius:9px;padding:10px;margin:10px 0;font-size:12px}.hidden{display:none!important}.recordEditForm{margin-top:12px;padding:12px;border-radius:11px;background:#fcf9f3;border:1px solid var(--line)}.recordEditForm .muted{margin:6px 0}.recordEditForm .editField{margin:8px 0}.linePreview{padding:12px;margin-top:10px;border-radius:10px;background:#fcf8ef;border:1px solid #e4d6bd}.linePreview .lineRow{display:flex;justify-content:space-between;gap:12px;padding:5px 0;border-bottom:1px solid #e9dfcd;overflow-wrap:anywhere}.linePreview .lineRow:last-child{border-bottom:0}.linePreview .lineRow>span{color:var(--sub);min-width:90px}.linePreview .lineRow>strong{text-align:right;min-width:0}
+.serviceDateBox{padding:13px;border:2px solid #b98d38;background:#fff9e8;border-radius:12px;margin-top:14px}
+.serviceDateBox .label{font-size:17px;color:#77521d}
+.serviceDateBox input[type=date]{flex:1;min-width:170px;background:#fff}
+.serviceDateBox .row2{align-items:center}
+.serviceDateBox.invalid{border-color:#bb3b35;background:#fff0ef}
+.serviceDateBox.invalid #serviceDateMessage{color:#9d2d2d;font-weight:800}
 .lineWarning{background:#fff3d5;border:1px solid #e2bf6e;border-radius:10px;padding:10px;margin-top:9px;color:#6f4b13}
 .lineWarning strong{display:block;margin-bottom:5px}
 .lineWarning ul{margin:4px 0;padding-left:20px}
@@ -113,8 +119,13 @@
 <div><label class="label" for="received">お客様からお預かりした額（円）</label><input class="input" id="received" type="number" min="0" inputmode="numeric" placeholder="例：60000" /></div>
 <div id="feeStatus" class="status warn" role="status" aria-live="polite">コース・オプションなどからお会計金額を自動計算します。</div>
 <div class="change"><div class="muted">おつり</div><div id="changeAmount" class="big">—</div><div class="muted" id="changeNote">お預かり金を入力してください。</div></div>
+<div class="serviceDateBox" id="serviceDateBox">
+<label class="label" for="serviceDate">来店日・実際の利用日【必須】</label>
+<p class="muted">お客様が来店した日付を選択。給料管理にもこの日付で反映します。今日の日付は自動で入りません。</p>
+<div class="row2"><input class="input" id="serviceDate" type="date" required aria-describedby="serviceDateMessage"/><button type="button" class="btn" id="serviceDateToday">今日の日付を選ぶ</button></div>
+<p class="muted" id="serviceDateMessage" role="status" aria-live="polite">来店日を選択してから保存してください。</p>
+</div>
 <div class="row2" style="margin-top:13px"><button type="button" class="btn gold" id="showCustomer">お客様に見せる画面</button><button type="button" class="btn primary" id="saveRecord">会計完了・履歴に保存</button></div>
-<label class="label" for="serviceDate">実際の利用日（任意・不明なら空欄）</label><input class="input" id="serviceDate" type="date" />
 <label class="label" for="memo">会計メモ（任意・個人情報は書かないでください）</label><textarea class="input" id="memo" rows="2" maxlength="250" placeholder="例：3P料金を店舗へ確認済み"></textarea>
 <div id="saveMessage" class="muted" role="status"></div>
 </section>
@@ -834,8 +845,23 @@ function similarSavedRecords(c){
  return records.filter(r=>saleDay(r)===day&&r.store===c.store&&Number(r.course)===Number(c.course)
   &&Number(r.total)===Number(c.total)&&String(r.mode||'通常')===String(c.mode||'通常'));
 }
+function requireServiceDate(){
+ const input=$('serviceDate'),box=$('serviceDateBox'),status=$('serviceDateMessage');
+ if(!validServiceDate(input.value)){
+  box.classList.add('invalid');status.textContent='⚠ 来店日が未入力です。実際の来店日を選んでください。';
+  input.focus();box.scrollIntoView({behavior:'smooth',block:'center'});return false;
+ }
+ box.classList.remove('invalid');status.textContent='選択中の来店日：'+input.value;return true;
+}
+$('serviceDate').addEventListener('change',()=>{
+ const value=$('serviceDate').value;
+ $('serviceDateBox').classList.remove('invalid');
+ $('serviceDateMessage').textContent=validServiceDate(value)?'選択中の来店日：'+value:'来店日を選択してから保存してください。';
+});
+$('serviceDateToday').onclick=()=>{$('serviceDate').value=tokyoDay(new Date());$('serviceDate').dispatchEvent(new Event('change'))};
 let lastSavedDraft='';
 $('saveRecord').onclick=()=>{
+ if(!requireServiceDate()){$('saveMessage').textContent='来店日を先に入力してください。';$('saveMessage').className='errorText small';return;}
  const c=getCalc();
  if(!c.complete){$('saveMessage').textContent='先に入力してください：'+missingAction(c).join('／');$('saveMessage').className='errorText small';return;}
  const signature=JSON.stringify(c);
@@ -845,23 +871,26 @@ $('saveRecord').onclick=()=>{
   const details=similar.slice(0,3).map(r=>(r.bookingTime||'時刻不明')+'／'+(r.bookingName||'名前未登録')+'／'+yen(r.total)).join('\n');
   if(!confirm('⚠ 同じ会計が登録されているかもしれません。\n同じ日・店舗・コース・金額の履歴が'+similar.length+'件あります。\n'+details+'\n\n内容を確認し、それでも別の予約なら「OK」で保存できます。\n保存をやめるなら「キャンセル」を押してください。'))return;
  }
+ if(!confirm('来店日：'+c.serviceDate+'\n店舗：'+c.store+'\nコース：'+c.course+'分\n会計：'+yen(c.total)+'\n\nこの来店日で会計履歴に保存しますか？'))return;
  const item=recordSnapshot(c);records.push(item);
  if(!saveRecords()){records.pop();$('saveMessage').textContent='保存できませんでした。バックアップを確認してください。';$('saveMessage').className='errorText small';return;}
  lastSavedDraft=signature;
  if(window.kaikeiCloud?.saveRecord)window.kaikeiCloud.saveRecord(item).catch(()=>{});
  if($('hotelName').value.trim())rememberHotel(false);
- $('saveMessage').textContent='✓ 会計履歴に保存しました。';
+ $('serviceDate').value='';
+ $('serviceDateMessage').textContent='次の会計は来店日を選び直してください。';
+ $('saveMessage').textContent='✓ 来店日 '+item.serviceDate+' で会計履歴に保存しました。';
  $('saveMessage').className='successText small';renderRecords();renderDaily();
 };
 $('recordFilter').onchange=renderRecords;$('recordSearch').oninput=renderRecords;$('exportCsv').onclick=csv;
 $('exportJson').onclick=()=>exportFile('会計バックアップ_'+new Date().toISOString().slice(0,10)+'.json',JSON.stringify({version:2,savedAt:new Date().toISOString(),records:records.map(({billed,feeDiff,expectedChange,...rest})=>rest),stores},null,2),'application/json');
 $('importJson').onchange=async()=>{const file=$('importJson').files?.[0];if(!file)return;try{const s=JSON.parse(await file.text());if(!Array.isArray(s.records)||!s.records.every(r=>r&&typeof r.id==='string'&&typeof r.date==='string'&&typeof r.store==='string'))throw Error('形式が違います');if(!confirm('バックアップ内の'+s.records.length+'件で現在の履歴を置き換えます。よろしいですか？'))return;const oldR=records,oldS=stores;records=s.records;if(validStores(s.stores)){stores=s.stores;if(stores.length===3)stores.push(structuredClone(defaultStores[3]));stores[3]=structuredClone(defaultStores[3]);stores[2].threeExt=null;stores[2].threeMode='total';stores[2].courses.forEach(c=>c.threeFee=null);if(stores[0].ruleVersion!==3){stores[0].threeMode='total';stores[0].threeExt=16000;[30000,39000,47000,null].forEach((v,i)=>{if(stores[0].courses[i])stores[0].courses[i].threeFee=v});stores[0].ruleVersion=3}}if(!saveRecords()||!saveStores()){records=oldR;stores=oldS;saveRecords();saveStores();throw Error('保存に失敗しました')}renderRecords();renderDaily();switchStore();$('backupMessage').textContent='バックアップを復元しました。'}catch(e){$('backupMessage').textContent='復元できません：'+e.message}finally{$('importJson').value=''}};
-if(!$('serviceDate').value)$('serviceDate').value=tokyoDay(new Date());
+// Require the visit date to be selected for each individual booking.
+$('serviceDate').value='';
 $('dailyDate').value=tokyoDay(new Date());
 $('dailyDate').addEventListener('change',renderDaily);
 $('dailyStore').addEventListener('change',renderDaily);
-$('dailyToday').onclick=()=>{if(!$('serviceDate').value)$('serviceDate').value=tokyoDay(new Date());
-$('dailyDate').value=tokyoDay(new Date());renderDaily()};
+$('dailyToday').onclick=()=>{$('dailyDate').value=tokyoDay(new Date());renderDaily()};
 $('dailyExport').onclick=dailyCsv;
 $('dailyShowAll').onclick=()=>{const box=$('dailyDays'),open=box.classList.toggle('hidden')===false;$('dailyShowAll').textContent=open?'日別一覧を閉じる':'記録のある日を表示';if(open)renderDailyDays()};
 $('jumpPay').onclick=()=>document.getElementById('checkout').scrollIntoView({behavior:'smooth'});
