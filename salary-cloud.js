@@ -29,7 +29,7 @@ function recordDay(r){
  if(typeof r.serviceDate==="string"&&/^\d{4}-\d\d-\d\d$/.test(r.serviceDate))return r.serviceDate;
  return jstDay(r.date)||"日付不明";
 }
-let user=null,unsubs=[],records=[],diaries={},dayChecks={},overrides={},selectedDay="",ready={records:false,diaries:false,settings:false};
+let user=null,unsubs=[],records=[],diaries={},overrides={},selectedDay="",ready={records:false,diaries:false,settings:false};
 const setStatus=(id,text,isError=false)=>{const el=$(id);if(el){el.textContent=text;el.classList.toggle("error",isError)}};
 function authError(e){
  const code=String(e?.code||"");
@@ -145,25 +145,6 @@ function optionBackInPay(result){
 function payWithoutOptions(result){
  return result.amount===null?null:result.amount-optionBackInPay(result);
 }
-function confirmedSignature(day,entries){
- const values=entries.map(({r,p})=>[r.id,r.date,r.serviceDate,r.store,r.course,r.total,r.base,r.ext,r.nomination,r.travel,r.optionsTotal,p.amount,p.known,p.missing.join("|")]).sort((a,b)=>String(a[0]).localeCompare(String(b[0])));
- const source=JSON.stringify([day,diaries[day]??null,values]);
- let h=2166136261;for(let i=0;i<source.length;i++){h^=source.charCodeAt(i);h=Math.imul(h,16777619)}
- return String(h>>>0);
-}
-async function toggleDayCheck(day,entries){
- if(!user||!entries.length)return;
- const signature=confirmedSignature(day,entries),isChecked=dayChecks[day]===signature;
- if(!isChecked&&entries.some(({p})=>p.amount===null)){
-  setStatus("checkMessage","未確定の給料があります。日記件数や給料設定を確認してください。",true);return;
- }
- const previous=dayChecks[day];dayChecks[day]=isChecked?"":signature;render();
- setStatus("checkMessage","確認状態を保存しています…");
- try{
-  await setDoc(doc(db,"users",user.uid,"salaryDiary",day),{checkedSignature:isChecked?"":signature,checkedAt:serverTimestamp()},{merge:true});
-  setStatus("checkMessage",isChecked?"確認済みを解除しました。":"この日の会計と給料を確認済みにしました。");
- }catch(e){if(previous===undefined)delete dayChecks[day];else dayChecks[day]=previous;render();setStatus("checkMessage",authError(e),true)}
-}
 function scoped(){
  const month=$("month").value,store=$("storeFilter").value;
  return records.filter(r=>recordDay(r).startsWith(month)&&(store==="all"||r.store===store));
@@ -200,9 +181,7 @@ function render(){
   const dateLabel=document.createElement("strong");dateLabel.className="dayDate";dateLabel.textContent=day;
   const count=document.createElement("span");count.className="pill";count.textContent=entries.length+"件";
   const arrow=document.createElement("span");arrow.className="dayArrow";arrow.textContent="›";arrow.setAttribute("aria-hidden","true");
-  top.append(dateLabel,count);
-  if(dayChecks[day]===confirmedSignature(day,entries)){const checked=document.createElement("span");checked.className="confirmedTag";checked.textContent="✓ 確認済み";top.append(checked)}
-  top.append(arrow);btn.append(top);
+  top.append(dateLabel,count,arrow);btn.append(top);
   const stats=document.createElement("div");stats.className="dayStats";
   const line=(label,amount)=>{
    const r=document.createElement("div");r.className="statLine";
@@ -245,28 +224,10 @@ function render(){
  const shopDailyCard=document.createElement("div");shopDailyCard.className="shopDailyTotal";
  const shopDailyLabel=document.createElement("div");shopDailyLabel.className="shopDailyLabel";shopDailyLabel.textContent="この日のお店に渡す合計（"+entries.length+"件分）";
  const shopDailyValue=document.createElement("strong");shopDailyValue.textContent=Y(dayShop);
- const shopDailyNote=document.createElement("p");shopDailyNote.className="noteFine";
- shopDailyNote.textContent="コース料金＋延長料金＋指名料＋交通費。下にある各予約の「お店に渡す分」をすべて合計しています。オプション代は含みません。";
- shopDailyCard.append(shopDailyLabel,shopDailyValue,shopDailyNote);detailHost.append(shopDailyCard);
- const hint=document.createElement("p");hint.className="noteFine";
- hint.textContent="※ 給料は保存済みのバック率・日記投稿数で計算。オプションを除く給料＝今までの給料−給料に含まれるオプションバック。お店に渡す分とは別です。";
- detailHost.append(hint);
- const dayConfirmed=dayChecks[selectedDay]===confirmedSignature(selectedDay,entries);
- const confirmation=document.createElement("div");confirmation.className="salaryConfirm";
- const confirmationText=document.createElement("div");confirmationText.className="salaryConfirmTitle";
- confirmationText.textContent=dayConfirmed?"✓ この日は確認済み":"この日の会計・給料を確認";
- const confirmationButton=document.createElement("button");confirmationButton.type="button";
- confirmationButton.className=dayConfirmed?"confirmButton confirmed":"confirmButton";
- confirmationButton.textContent=dayConfirmed?"確認済みを解除":"確認済みにする";
- confirmationButton.onclick=()=>toggleDayCheck(selectedDay,entries);
- const checkMessage=document.createElement("p");checkMessage.id="checkMessage";checkMessage.className="muted";checkMessage.setAttribute("role","status");
- if(dayChecks[selectedDay]&&!dayConfirmed)checkMessage.textContent="確認後に記録や計算が変わりました。再確認してください。";
- confirmation.append(confirmationText,confirmationButton,checkMessage);detailHost.append(confirmation);
- const moneySummary=document.createElement("div");moneySummary.className="dayGroupSummary";
- const moneyTitle=document.createElement("strong");moneyTitle.textContent="この日のお金の受け渡し";moneySummary.append(moneyTitle);
- appendMoneyRow(moneySummary,"お店に渡す分・この日合計（"+entries.length+"件）",dayShop,true);
- appendMoneyRow(moneySummary,"自分で受け取るオプション代（お客様の支払額）",dayOptions,true);
- detailHost.append(moneySummary);
+ const optionTotalLabel=document.createElement("div");optionTotalLabel.className="shopDailyOption";
+ optionTotalLabel.textContent="この日のオプション代　"+Y(dayOptions);
+ shopDailyCard.append(shopDailyLabel,shopDailyValue,optionTotalLabel);
+ detailHost.append(shopDailyCard);
  for(const {r,p} of entries){
   const item=document.createElement("div");item.className="item";
   const line=document.createElement("div");line.className="flex";
@@ -354,7 +315,7 @@ async function saveDiary(){
 }
 function cleanup(){
  for(const unsub of unsubs){try{unsub()}catch{}}
- unsubs=[];records=[];diaries={};dayChecks={};overrides={};selectedDay="";
+ unsubs=[];records=[];diaries={};overrides={};selectedDay="";
  ready={records:false,diaries:false,settings:false};
  $("privateContent").classList.add("hidden");$("authGate").classList.remove("hidden");
 }
@@ -370,7 +331,6 @@ function attach(){
  unsubs.push(onSnapshot(collection(db,"users",uid,"salaryDiary"),s=>{
   if(user?.uid!==uid)return;
   diaries=Object.fromEntries(s.docs.map(d=>[d.id,Number(d.data().count)]).filter(([day,count])=>/^\d{4}-\d\d-\d\d$/.test(day)&&Number.isInteger(count)&&count>=0));
-  dayChecks=Object.fromEntries(s.docs.map(d=>[d.id,d.data().checkedSignature]).filter(([day,v])=>/^\d{4}-\d\d-\d\d$/.test(day)&&typeof v==="string"&&v));
   ready.diaries=true;updateStatus();render();
  },onFailure));
  unsubs.push(onSnapshot(doc(db,"users",uid,"salarySettings","main"),s=>{
